@@ -99,13 +99,13 @@ func missingRun(cmd *cobra.Command, args []string) {
 	recursive := viper.GetBool("recursive")
 	episodeFileIndex := map[string]*namer.EpisodeFile{}
 	for _, fp := range args {
-		fmt.Printf("searching in %s", fp)
+		fmt.Printf("searching in %s\n", fp)
 		episodeFiles, err := es.ListEpisodeFile(fp, recursive)
 		if err != nil {
-			fmt.Printf(", error: %v\n", err)
+			fmt.Printf("error: %v\n", err)
 			continue
 		}
-		fmt.Printf(", found %d episode files\n", len(episodeFiles))
+		fmt.Printf("found %d episode files\n", len(episodeFiles))
 		for _, ef := range episodeFiles {
 			seId := tvdbex.SeasonEpisodeNumberIndex(ef.Episode.AiredSeason, ef.Episode.AiredEpisodeNumber)
 			episodeFileIndex[seId] = ef

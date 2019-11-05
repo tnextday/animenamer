@@ -142,7 +142,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 		}
 	}
 	if len(es.Filters) == 0 {
-		fmt.Printf("no valid pattern")
+		fmt.Println("no valid pattern")
 		os.Exit(1)
 	}
 
@@ -152,13 +152,13 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 	replaceSpaceWith := viper.GetString("replaceSpace")
 	dryRun := viper.GetBool("dryRun")
 	for _, fp := range args {
-		fmt.Printf("processing %s", fp)
+		fmt.Printf("processing %s\n", fp)
 		episodeFiles, err := es.ListEpisodeFile(fp, recursive)
 		if err != nil {
-			fmt.Printf(", error: %v\n", err)
+			fmt.Printf("error: %v\n", err)
 			continue
 		}
-		fmt.Printf(", found %d episode files\n", len(episodeFiles))
+		fmt.Printf("found %d episode files\n", len(episodeFiles))
 		for _, ef := range episodeFiles {
 			renames := ef.Renames(format, replaceSpaceWith, renameSubtitle)
 			if dryRun {
