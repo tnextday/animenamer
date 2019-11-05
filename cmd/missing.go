@@ -120,9 +120,9 @@ func missingRun(cmd *cobra.Command, args []string) {
 	for _, ep := range series.Episodes {
 		seId := tvdbex.SeasonEpisodeNumberIndex(ep.AiredSeason, ep.AiredEpisodeNumber)
 		if _, exists := episodeFileIndex[seId]; !exists {
-			s := fmt.Sprintf("missing s%2de%2d", ep.AiredSeason, ep.AiredEpisodeNumber)
+			s := fmt.Sprintf("missing s%.2de%.2d", ep.AiredSeason, ep.AiredEpisodeNumber)
 			if ep.AiredSeason != 0 {
-				s += fmt.Sprintf(", absolute %d", ep.AbsoluteNumber)
+				s += fmt.Sprintf(", absolute %.3d", ep.AbsoluteNumber)
 			}
 			fmt.Println(s)
 		}
