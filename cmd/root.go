@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/pflag"
 	"os"
 	"path"
 
@@ -54,17 +55,18 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is animenamer.yaml)")
+	rootCmd.PersistentFlags().String("apikey", "", "the tvdb apikey")
+	rootCmd.PersistentFlags().String("seriesId", "", "explicitly set the show id for TVdb to use (applies to all files)")
+	rootCmd.PersistentFlags().StringP("name", "n", "", "override the parsed series name with this (applies to all files)")
+	rootCmd.PersistentFlags().String("mediaExt", "mkv,mp4,avi,rm,rmvb,mov,m4v,wmv", "media file extensions")
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show debugging info")
 
-	rootCmd.Flags().String("apikey", "", "the tvdb apikey")
-	rootCmd.Flags().String("seriesId", "", "explicitly set the show id for TVdb to use (applies to all files)")
-	rootCmd.Flags().StringP("name", "n", "", "override the parsed series name with this (applies to all files)")
 	rootCmd.Flags().Bool("renameSubtitle", true, "also rename subtitle file")
 	rootCmd.Flags().String("subtitleExt", "ass,ssa,srt,sub", "subtitle file extensions")
-	rootCmd.Flags().String("mediaExt", "mkv,mp4,avi,rm,rmvb,mov,m4v,wmv", "media file extensions")
-	rootCmd.Flags().StringArrayP("pattern", "p", nil,
+	rootCmd.Flags().StringSliceP("pattern", "p", nil,
 		"filename regex named pattern, \n"+
 			"'series', 'seriesId', 'absolute', 'season', 'episode', 'ext' is the reserved name, its may be override by tvdb info.\n"+
-			`example: ^(?P<name>\.+)\.(?P<absolute>\d+).*.(?P<ext>\w+)$`+"\n")
+			`example: ^(?P<name>\.+)\.(?P<absolute>\d+).*\.(?P<ext>\w+)$`)
 	//rootCmd.MarkFlagRequired("pattern")
 	rootCmd.Flags().String("format", "{series}.S{season.2}E{episode.2}.[{absolute.3}].{ext}",
 		"new filename format. variables:\n"+
@@ -73,14 +75,20 @@ func init() {
 	rootCmd.Flags().String("replaceSpace", "", "replace the whitespace with this value in new filename")
 
 	lang, _ := jibber_jabber.DetectLanguage()
-	rootCmd.Flags().String("language", lang, "preferred language")
-	rootCmd.Flags().BoolP("recursive", "r", true, "descend more than one level directories supplied as arguments")
+	rootCmd.PersistentFlags().String("language", lang, "preferred language")
+	rootCmd.PersistentFlags().BoolP("recursive", "r", true, "descend more than one level directories supplied as arguments")
 	rootCmd.Flags().BoolP("dryRun", "d", false, "only print the renames")
-
-	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show debugging info")
 
 	rootCmd.Flags().SortFlags = false
 	viper.BindPFlags(rootCmd.Flags())
+	rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+		switch flag.Name {
+		case "config":
+			return
+		default:
+			viper.BindPFlag(flag.Name, flag)
+		}
+	})
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -105,7 +113,7 @@ func initConfig() {
 }
 
 func rootCmdFunc(cmd *cobra.Command, args []string) {
-	if verbose.V {
+	if viper.GetBool("verbose") {
 		for k, v := range viper.AllSettings() {
 			verbose.Print("[V] %s: %s\n", k, v)
 		}
