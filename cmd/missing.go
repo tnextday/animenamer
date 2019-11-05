@@ -50,7 +50,7 @@ func init() {
 func missingRun(cmd *cobra.Command, args []string) {
 	if viper.GetBool("verbose") {
 		for k, v := range viper.AllSettings() {
-			verbose.Print("[V] %s: %s\n", k, v)
+			verbose.Print("[V] %s: %v\n", k, v)
 		}
 	}
 	if viper.GetInt("seriesId") == 0 || viper.GetString("name") == "" {
