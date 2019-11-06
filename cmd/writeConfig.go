@@ -23,13 +23,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	configFormat string
+)
+
 // writeConfigCmd represents the writeConfig command
 var writeConfigCmd = &cobra.Command{
 	Use:   "writeConfig",
-	Short: "Write default config to ./animenamer.yaml",
+	Short: "Write default config to current directory",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if e := viper.WriteConfigAs("animenamer.yaml"); e != nil {
+
+		if e := viper.WriteConfigAs("animenamer." + configFormat); e != nil {
 			fmt.Println("error:", e)
 		}
 	},
@@ -37,4 +42,5 @@ var writeConfigCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(writeConfigCmd)
+	writeConfigCmd.Flags().StringVarP(&configFormat, "format", "f", "yaml", "config file format, yaml or json")
 }
