@@ -57,6 +57,12 @@ linux-arm:
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm go build $(GO_LDFLAGS) $(GO_FLAGS) -o build/linux-arm/$(BINARY) $(SOURCE_DIR)
 	cd build/linux-arm && zip ../releases/animenamer_$(GIT_TAG)_linux_arm.zip animenamer
 
+linux-arm64:
+	mkdir -p build/linux-arm64
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build $(GO_LDFLAGS) $(GO_FLAGS) -o build/linux-arm64/$(BINARY) $(SOURCE_DIR)
+	cd build/linux-arm64 && zip ../releases/animenamer_$(GIT_TAG)_linux_arm64.zip animenamer
+
+
 windows-amd64:
 	mkdir -p build/windows-amd64
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(GO_LDFLAGS) $(GO_FLAGS) -o build/windows-amd64/$(BINARY).exe $(SOURCE_DIR)
@@ -70,4 +76,4 @@ windows-386:
 release-dir:
 	mkdir -p build/releases
 
-release: proxy release-dir darwin-amd64 linux-amd64 linux-386 linux-arm windows-amd64 windows-386
+release: proxy release-dir darwin-amd64 linux-amd64 linux-386 linux-arm linux-arm64 windows-amd64 windows-386

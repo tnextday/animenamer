@@ -12,6 +12,12 @@ animenamer 是一个动画（anime）重命名工具，它可以使用`集数`�
 * 显示缺失的剧集
 * 单文件无依赖，下载即可运行
 
+## 安装
+
+#### 二进制
+
+https://github.com/tnextday/animenamer/releases
+
 ## 使用方法
 
 #### 基本使用
