@@ -43,7 +43,7 @@ func init() {
 			`(?i).*(?P<season>\d+)x(?P<episode>\d+).*`,
 		},
 		"filename regex named pattern, \n"+
-			"'series', 'seriesId', 'absolute', 'season', 'episode', 'ext' is the reserved name, its may be override by tvdb info.\n")
+			"'absolute', 'season', 'episode' is the required name.\n")
 	viper.BindPFlags(missingCmd.Flags())
 }
 
