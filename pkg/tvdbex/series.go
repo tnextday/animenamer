@@ -9,12 +9,14 @@ import (
 type Series struct {
 	tvdb.Series
 	EpisodesIndex map[string]*tvdb.Episode
+	Images        map[string][]tvdb.Image
 }
 
 func NewSeries(s tvdb.Series) *Series {
 	series := &Series{
 		Series:        s,
 		EpisodesIndex: make(map[string]*tvdb.Episode),
+		Images:        map[string][]tvdb.Image{},
 	}
 	for i, episode := range s.Episodes {
 		seId := SeasonEpisodeNumberIndex(episode.AiredSeason, episode.AiredEpisodeNumber)
@@ -48,3 +50,7 @@ func AbsoluteNumberIndex(absoluteNumber int) string {
 func SeasonEpisodeNumberIndex(season, number int) string {
 	return "s" + strconv.Itoa(season) + "e" + strconv.Itoa(number)
 }
+
+//func (s *Series) GetImages(keyType string) []tvdb.Image {
+//
+//}

@@ -2,9 +2,19 @@ package tvdbex
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/pioz/tvdb"
+)
+
+const (
+	BaseEpisodesImageURL   string = "https://api.thetvdb.com/banners/episodes"
+	ImageTypeKeyFanArt            = "fanart"
+	ImageTypeKeyPoster            = "poster"
+	ImageTypeKeySeason            = "season"
+	ImageTypeKeySeasonWide        = "seasonwide"
+	ImageTypeKeySeries            = "series"
 )
 
 type TVDB struct {
@@ -69,4 +79,71 @@ func (db *TVDB) GetSeries(id int) (*Series, error) {
 	s := NewSeries(series)
 	db.seriesCache[id] = s
 	return s, nil
+}
+
+func (db *TVDB) GetSeriesWithActors(id int) (*Series, error) {
+	series, err := db.GetSeries(id)
+	if err != nil {
+		return nil, err
+	}
+	if len(series.Actors) > 0 {
+		return series, nil
+	}
+	db.Client.Language = db.Language
+	err = db.Client.GetSeriesActors(&series.Series)
+	if err != nil && !tvdb.HaveCodeError(404, err) {
+		return nil, err
+	}
+	return series, nil
+}
+
+func (db *TVDB) GetSeriesWithImages(id int) (*Series, error) {
+	series, err := db.GetSeries(id)
+	if err != nil {
+		return nil, err
+	}
+	if len(series.Images) > 0 {
+		return series, nil
+	}
+	db.Client.Language = db.Language
+
+	tmp := tvdb.Series{
+		ID: series.ID,
+	}
+	allImageTypes := []string{
+		ImageTypeKeyFanArt, ImageTypeKeyPoster, ImageTypeKeySeason, ImageTypeKeySeasonWide, ImageTypeKeySeries,
+	}
+	images := map[string][]tvdb.Image{}
+	for _, k := range allImageTypes {
+		tmp.Images = nil
+		var err error = nil
+		switch k {
+		case ImageTypeKeyFanArt:
+			err = db.Client.GetSeriesFanartImages(&tmp)
+		case ImageTypeKeyPoster:
+			err = db.Client.GetSeriesPosterImages(&tmp)
+		case ImageTypeKeySeason:
+			err = db.Client.GetSeriesSeasonImages(&tmp)
+		case ImageTypeKeySeasonWide:
+			err = db.Client.GetSeriesSeasonwideImages(&tmp)
+		case ImageTypeKeySeries:
+			err = db.Client.GetSeriesSeriesImages(&tmp)
+		}
+		if err == nil {
+			images[k] = tmp.Images
+		} else {
+			if !tvdb.HaveCodeError(404, err) {
+				return nil, err
+			}
+		}
+	}
+	series.Images = images
+	return series, nil
+}
+
+func GetEpisodeImageUrl(episode *tvdb.Episode) string {
+	if episode == nil || episode.SeriesID == 0 || episode.ID == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s/%d/%d.jpg", BaseEpisodesImageURL, episode.SeriesID, episode.ID)
 }
