@@ -97,19 +97,19 @@ func (es *EpisodeSearch) ListEpisodeFile(fp string, recursive bool) ([]*EpisodeF
 				if mf, err := es.newEpisodeFile(dirname, fileName, filenameList); err == nil {
 					mediaFileList = append(mediaFileList, mf)
 				} else {
-					verbose.Print("newEpisodeFile (%s) err: %v\n", path.Join(dirname, fileName), err)
+					verbose.Printf("newEpisodeFile (%s) err: %v\n", path.Join(dirname, fileName), err)
 				}
 			} else {
 				for _, fn := range filenameList {
 					if mf, err := es.newEpisodeFile(dirname, fn, filenameList); err == nil {
 						mediaFileList = append(mediaFileList, mf)
 					} else {
-						verbose.Print("newEpisodeFile (%s) err: %v\n", path.Join(dirname, fn), err)
+						verbose.Printf("newEpisodeFile (%s) err: %v\n", path.Join(dirname, fn), err)
 					}
 				}
 			}
 		} else {
-			verbose.Print("readdir (%s) err: %v\n", dirname, err)
+			verbose.Printf("readdir (%s) err: %v\n", dirname, err)
 		}
 	}
 	return mediaFileList, nil
@@ -140,13 +140,13 @@ func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filenameList [
 		if seriesId == 0 {
 			seriesId, err = es.TVDB.Search(infos.GetString(InfoKeySeries))
 			if err != nil {
-				verbose.Print("search series (%s) error: %v\n", infos.GetString(InfoKeySeries), err)
+				verbose.Printf("search series (%s) error: %v\n", infos.GetString(InfoKeySeries), err)
 			}
 		}
 		if seriesId != 0 {
 			series, err = es.TVDB.GetSeries(seriesId)
 			if err != nil {
-				verbose.Print("get series (%d) error: %v\n", seriesId, err)
+				verbose.Printf("get series (%d) error: %v\n", seriesId, err)
 			}
 		}
 	}
@@ -190,7 +190,7 @@ func matchEpisodeFile(filter *regexp.Regexp, filename string) (infos Infos, err 
 			if i, err := strconv.Atoi(strings.TrimSpace(matches[i])); err == nil {
 				infos[v] = i
 			} else {
-				verbose.Print("%s, convert %s(%s) to int err: %v\n", filename, v, matches[i], err)
+				verbose.Printf("%s, convert %s(%s) to int err: %v\n", filename, v, matches[i], err)
 			}
 		default:
 			infos[v] = strings.TrimSpace(matches[i])

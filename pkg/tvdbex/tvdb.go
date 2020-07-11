@@ -81,29 +81,22 @@ func (db *TVDB) GetSeries(id int) (*Series, error) {
 	return s, nil
 }
 
-func (db *TVDB) GetSeriesWithActors(id int) (*Series, error) {
-	series, err := db.GetSeries(id)
-	if err != nil {
-		return nil, err
-	}
+func (db *TVDB) GetSeriesActors(series *Series) (err error) {
+
 	if len(series.Actors) > 0 {
-		return series, nil
+		return nil
 	}
 	db.Client.Language = db.Language
 	err = db.Client.GetSeriesActors(&series.Series)
 	if err != nil && !tvdb.HaveCodeError(404, err) {
-		return nil, err
+		return err
 	}
-	return series, nil
+	return nil
 }
 
-func (db *TVDB) GetSeriesWithImages(id int) (*Series, error) {
-	series, err := db.GetSeries(id)
-	if err != nil {
-		return nil, err
-	}
+func (db *TVDB) GetSeriesImages(series *Series) (err error) {
 	if len(series.Images) > 0 {
-		return series, nil
+		return nil
 	}
 	db.Client.Language = db.Language
 
@@ -133,12 +126,12 @@ func (db *TVDB) GetSeriesWithImages(id int) (*Series, error) {
 			images[k] = tmp.Images
 		} else {
 			if !tvdb.HaveCodeError(404, err) {
-				return nil, err
+				return err
 			}
 		}
 	}
 	series.Images = images
-	return series, nil
+	return nil
 }
 
 func GetEpisodeImageUrl(episode *tvdb.Episode) string {

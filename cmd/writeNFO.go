@@ -16,9 +16,18 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
-	"strings"
+	"path"
+	"path/filepath"
+	"strconv"
+
+	"github.com/pioz/tvdb"
+
+	"github.com/tnextday/animenamer/pkg/kodi"
 
 	"github.com/spf13/viper"
 	"github.com/tnextday/animenamer/pkg/namer"
@@ -46,17 +55,18 @@ func init() {
 		},
 		"filename regex named pattern, \n"+
 			"'absolute', 'season', 'episode' is the required name.\n")
-	writeNFOCmd.Flags().StringP("baseDir", "b", "", "series base folder, to write tvshow.nfo")
+	writeNFOCmd.Flags().StringP("baseDir", "b", "", "series base folder to write tvshow.nfo")
+	writeNFOCmd.Flags().Bool("overrideImage", false, "override exists image file")
 	viper.BindPFlags(writeNFOCmd.Flags())
 }
 
 func writeNFORun(cmd *cobra.Command, args []string) {
 	if viper.GetBool("verbose") {
 		for k, v := range viper.AllSettings() {
-			verbose.Print("[V] %s: %v\n", k, v)
+			verbose.Printf("[V] %s: %v\n", k, v)
 		}
 	}
-	if viper.GetInt("seriesId") == 0 || viper.GetString("name") == "" {
+	if viper.GetInt("seriesId") == 0 && viper.GetString("name") == "" {
 		fmt.Printf("name or seriesId must be defined\n")
 		os.Exit(1)
 	}
@@ -64,7 +74,7 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 	if apiKey == "" {
 		apiKey = DefaultTvDbApiKey
 	}
-	tvdb, err := tvdbex.NewTVDB(apiKey, viper.GetString("language"))
+	tvdbEx, err := tvdbex.NewTVDB(apiKey, viper.GetString("language"))
 	if err != nil {
 		fmt.Printf("new tvdb error: %v\n", err)
 		os.Exit(1)
@@ -73,62 +83,163 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 	es := namer.EpisodeSearch{
 		MediaExt:     namer.NewFileExtFromString(viper.GetString("mediaExt"), ","),
 		SubtitlesExt: namer.NewFileExtFromString(viper.GetString("subtitleExt"), ","),
-		TVDB:         tvdb,
+		TVDB:         tvdbEx,
 		SeriesName:   viper.GetString("name"),
 		SeriesId:     viper.GetInt("seriesId"),
 	}
+	fmt.Println("get series details")
 	if es.SeriesId == 0 {
-		es.SeriesId, err = tvdb.Search(es.SeriesName)
+		es.SeriesId, err = tvdbEx.Search(es.SeriesName)
 		if err != nil {
 			fmt.Printf("can't search series, error: %v\n", err)
 			os.Exit(1)
 		}
 	}
-	series, err := tvdb.GetSeries(es.SeriesId)
-	if err != nil {
-		fmt.Printf("can't get series from tvdb, error: %v\n", err)
-		os.Exit(1)
-	}
-	for _, p := range viper.GetStringSlice("missing.pattern") {
+	for _, p := range viper.GetStringSlice("writeNFO.pattern") {
 		if err = es.AddPattern(p); err != nil {
 			fmt.Printf("parse pattern (%s) error: %v\n", p, err)
 		}
 	}
 	if len(es.Filters) == 0 {
-		fmt.Printf("no valid pattern")
+		fmt.Printf("no valid pattern\n")
 		os.Exit(1)
 	}
-
+	series, err := tvdbEx.GetSeries(es.SeriesId)
+	if err != nil {
+		fmt.Printf("can't get series from tvdb, error: %v\n", err)
+		os.Exit(1)
+	}
+	if err := tvdbEx.GetSeriesActors(series); err != nil {
+		fmt.Printf("can't get series actors from tvdb, error: %v\n", err)
+		os.Exit(1)
+	}
+	if err := tvdbEx.GetSeriesImages(series); err != nil {
+		fmt.Printf("can't get series images from tvdb, error: %v\n", err)
+		os.Exit(1)
+	}
 	recursive := viper.GetBool("recursive")
-	episodeFileIndex := map[string]*namer.EpisodeFile{}
+	var episodeFiles []*namer.EpisodeFile
 	for _, fp := range args {
-		fmt.Printf("searching in %s\n", fp)
-		episodeFiles, err := es.ListEpisodeFile(fp, recursive)
+		fmt.Printf("searching episode files in %s\n", fp)
+		files, err := es.ListEpisodeFile(fp, recursive)
 		if err != nil {
 			fmt.Printf("error: %v\n", err)
 			continue
 		}
-		fmt.Printf("found %d episode files\n", len(episodeFiles))
-		for _, ef := range episodeFiles {
-			seId := tvdbex.SeasonEpisodeNumberIndex(ef.Episode.AiredSeason, ef.Episode.AiredEpisodeNumber)
-			episodeFileIndex[seId] = ef
-		}
+		fmt.Printf("found %d episode files\n", len(files))
+		episodeFiles = append(episodeFiles, files...)
 	}
-	fmt.Printf("\nSeries: %s\n", series.SeriesName)
-	fmt.Printf("SeriesId: %d\n", series.ID)
-	if len(series.Aliases) > 0 {
-		fmt.Printf("Aliases: %s\n", strings.Join(series.Aliases, ", "))
-	}
-	fmt.Println("")
-	for _, ep := range series.Episodes {
-		seId := tvdbex.SeasonEpisodeNumberIndex(ep.AiredSeason, ep.AiredEpisodeNumber)
-		if _, exists := episodeFileIndex[seId]; !exists {
-			s := fmt.Sprintf("missing s%.2de%.2d", ep.AiredSeason, ep.AiredEpisodeNumber)
-			if ep.AiredSeason != 0 {
-				s += fmt.Sprintf(", absolute %.3d", ep.AbsoluteNumber)
-			}
-			fmt.Println(s)
-		}
 
+	fmt.Printf("writing nfo files\n")
+
+	overrideImage := viper.GetBool("overrideImage")
+	for _, epf := range episodeFiles {
+		ep := epf.Episode
+		verbose.Printf("processing %s\n",
+			epf.Filename)
+		episodeDetails := kodi.EpisodeDetails{
+			Title:         ep.EpisodeName,
+			OriginalTitle: "",
+			ShowTitle:     ep.EpisodeName,
+			Ratings: []*kodi.Rating{
+				&kodi.Rating{
+					Name:    "tvdb",
+					Max:     10,
+					Default: true,
+					Value:   ep.SiteRating,
+					Votes:   ep.SiteRatingCount,
+				},
+			},
+			Season:  ep.AiredSeason,
+			Episode: ep.AiredEpisodeNumber,
+			Plot:    ep.Overview,
+			Thumb:   tvdbex.GetEpisodeImageUrl(ep),
+			UniqueIDs: []*kodi.UniqueID{
+				&kodi.UniqueID{
+					Type:    "tvdb",
+					Default: true,
+					ID:      strconv.Itoa(ep.ID),
+				},
+				&kodi.UniqueID{
+					Type:    "imdb",
+					Default: false,
+					ID:      ep.ImdbID,
+				},
+			},
+			Genres:    series.Genre,
+			Credits:   ep.Writers,
+			Director:  ep.Director,
+			Premiered: ep.FirstAired,
+			Studio:    series.Network,
+		}
+		actorsMap := map[string]bool{}
+		for _, a := range series.Actors {
+			actorsMap[a.Name] = true
+			episodeDetails.Actors = append(episodeDetails.Actors,
+				&kodi.Actor{
+					Name:  a.Name,
+					Role:  a.Role,
+					Order: a.SortOrder,
+					Thumb: tvdb.ImageURL(a.Image),
+				})
+		}
+		for _, guestStar := range ep.GuestStars {
+			if _, exists := actorsMap[guestStar]; exists {
+				continue
+			}
+			episodeDetails.Actors = append(episodeDetails.Actors,
+				&kodi.Actor{
+					Name:  guestStar,
+					Order: len(episodeDetails.Actors),
+				})
+		}
+		baseName := epf.Filename[0 : len(epf.Filename)-len(filepath.Ext(epf.Filename))]
+		nfoPath := path.Join(epf.FileDir, baseName+".nfo")
+
+		if err = writeNFOFile(episodeDetails, nfoPath); err != nil {
+			fmt.Printf("[!]write nfo %s error: %v\n", nfoPath, err)
+			continue
+		}
+		imagePath := path.Join(epf.FileDir, baseName+".jpg")
+		if !overrideImage && fileExists(imagePath) {
+			continue
+		}
+		imageUrl := tvdb.ImageURL(ep.Filename)
+		verbose.Printf("downloading image [%s](%s)\n", imagePath, imageUrl)
+		if err = downloadToFile(imageUrl, imagePath); err != nil {
+			fmt.Printf("[!]download image [%s](%s) error: %v\n", imagePath, imageUrl, err)
+			continue
+		}
 	}
+
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func downloadToFile(url, fp string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(fp, buf, 0644)
+}
+
+func writeNFOFile(v interface{}, fp string) error {
+	buf, err := xml.MarshalIndent(v, "", "\t")
+
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(fp, buf, 0644)
 }

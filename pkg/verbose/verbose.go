@@ -7,7 +7,7 @@ import (
 
 var V = false
 
-func Print(format string, a ...interface{}) {
+func Printf(format string, a ...interface{}) {
 	if V {
 		fmt.Fprintf(os.Stderr, format, a...)
 	}

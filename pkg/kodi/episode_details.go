@@ -18,7 +18,7 @@ type EpisodeDetails struct {
 	Plot            string      `xml:"plot,omitempty"`
 	TagLine         string      `xml:"tagline,omitempty"`
 	RunTime         int         `xml:"runtime,omitempty"`
-	Thumbs          []string    `xml:"thumb,omitempty"`
+	Thumb           string      `xml:"thumb,omitempty"`
 	Mpaa            string      `xml:"mpaa,omitempty"`
 	PlayCount       int         `xml:"playcount,omitempty"`
 	LastPlayed      string      `xml:"lastplayed,omitempty"`
@@ -26,14 +26,14 @@ type EpisodeDetails struct {
 	UniqueIDs       []*UniqueID `xml:"uniqueid"`
 	Genres          []string    `xml:"genre,omitempty"`
 	Credits         []string    `xml:"credits,omitempty"`
-	Directors       []string    `xml:"director,omitempty"`
+	Director        string      `xml:"director,omitempty"`
 	Tags            []string    `xml:"tags,omitempty"`
 	Premiered       string      `xml:"premiered"` // Do not use. Use <premiered> instead
 	Year            string      `xml:"year,omitempty"`
 	Status          string      `xml:"status,omitempty"`
 	Code            string      `xml:"code,omitempty"`  // Not used
 	Aired           string      `xml:"aired,omitempty"` // Not used
-	Studios         []string    `xml:"studio,omitempty"`
+	Studio          string      `xml:"studio,omitempty"`
 	Trailer         string      `xml:"trailer,omitempty"`
 	EpisodeBookmark string      `xml:"episodebookmark>position,omitempty"`
 	Actors          []*Actor    `xml:"actor,omitempty"`

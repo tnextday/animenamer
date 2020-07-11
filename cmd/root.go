@@ -116,7 +116,7 @@ func initConfig() {
 func rootCmdFunc(cmd *cobra.Command, args []string) {
 	if viper.GetBool("verbose") {
 		for k, v := range viper.AllSettings() {
-			verbose.Print("[V] %s: %v\n", k, v)
+			verbose.Printf("[V] %s: %v\n", k, v)
 		}
 	}
 	apiKey := viper.GetString("apikey")
