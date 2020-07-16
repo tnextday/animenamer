@@ -3,6 +3,8 @@ package tvdbex
 import (
 	"strconv"
 
+	"github.com/tnextday/animenamer/pkg/kodi"
+
 	"github.com/pioz/tvdb"
 )
 
@@ -10,6 +12,7 @@ type Series struct {
 	tvdb.Series
 	EpisodesIndex map[string]*tvdb.Episode
 	Images        map[string][]tvdb.Image
+	NamedSeasons  []*kodi.NamedSeason
 }
 
 func NewSeries(s tvdb.Series) *Series {

@@ -94,6 +94,15 @@ func (db *TVDB) GetSeriesActors(series *Series) (err error) {
 	return nil
 }
 
+func (db *TVDB) GetSeriesSummary(series *Series) (err error) {
+	db.Client.Language = db.Language
+	err = db.Client.GetSeriesSummary(&series.Series)
+	if err != nil && !tvdb.HaveCodeError(404, err) {
+		return err
+	}
+	return nil
+}
+
 func (db *TVDB) GetSeriesImages(series *Series) (err error) {
 	if len(series.Images) > 0 {
 		return nil

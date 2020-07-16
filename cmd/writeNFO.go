@@ -87,7 +87,7 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 		SeriesName:   viper.GetString("name"),
 		SeriesId:     viper.GetInt("seriesId"),
 	}
-	fmt.Println("get series details")
+	fmt.Printf("get series details")
 	if es.SeriesId == 0 {
 		es.SeriesId, err = tvdbEx.Search(es.SeriesName)
 		if err != nil {
@@ -95,6 +95,8 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 	}
+	fmt.Printf(", SeriesId %d\n", es.SeriesId)
+
 	for _, p := range viper.GetStringSlice("writeNFO.pattern") {
 		if err = es.AddPattern(p); err != nil {
 			fmt.Printf("parse pattern (%s) error: %v\n", p, err)
@@ -117,6 +119,10 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 		fmt.Printf("can't get series images from tvdb, error: %v\n", err)
 		os.Exit(1)
 	}
+	if err := tvdbEx.GetSeriesSummary(series); err != nil {
+		fmt.Printf("can't get series summary from tvdb, error: %v\n", err)
+		os.Exit(1)
+	}
 	recursive := viper.GetBool("recursive")
 	var episodeFiles []*namer.EpisodeFile
 	for _, fp := range args {
@@ -131,84 +137,19 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Printf("writing nfo files\n")
-
 	overrideImage := viper.GetBool("overrideImage")
 	for _, epf := range episodeFiles {
-		ep := epf.Episode
 		verbose.Printf("processing %s\n",
 			epf.Filename)
-		episodeDetails := kodi.EpisodeDetails{
-			Title:         ep.EpisodeName,
-			OriginalTitle: "",
-			ShowTitle:     ep.EpisodeName,
-			Ratings: []*kodi.Rating{
-				&kodi.Rating{
-					Name:    "tvdb",
-					Max:     10,
-					Default: true,
-					Value:   ep.SiteRating,
-					Votes:   ep.SiteRatingCount,
-				},
-			},
-			Season:  ep.AiredSeason,
-			Episode: ep.AiredEpisodeNumber,
-			Plot:    ep.Overview,
-			Thumb:   tvdbex.GetEpisodeImageUrl(ep),
-			UniqueIDs: []*kodi.UniqueID{
-				&kodi.UniqueID{
-					Type:    "tvdb",
-					Default: true,
-					ID:      strconv.Itoa(ep.ID),
-				},
-				&kodi.UniqueID{
-					Type:    "imdb",
-					Default: false,
-					ID:      ep.ImdbID,
-				},
-			},
-			Genres:    series.Genre,
-			Credits:   ep.Writers,
-			Director:  ep.Director,
-			Premiered: ep.FirstAired,
-			Studio:    series.Network,
+		if err = writeEpisodeNFO(epf, overrideImage); err != nil {
+			fmt.Printf("[!]%v\n", err)
 		}
-		actorsMap := map[string]bool{}
-		for _, a := range series.Actors {
-			actorsMap[a.Name] = true
-			episodeDetails.Actors = append(episodeDetails.Actors,
-				&kodi.Actor{
-					Name:  a.Name,
-					Role:  a.Role,
-					Order: a.SortOrder,
-					Thumb: tvdb.ImageURL(a.Image),
-				})
-		}
-		for _, guestStar := range ep.GuestStars {
-			if _, exists := actorsMap[guestStar]; exists {
-				continue
-			}
-			episodeDetails.Actors = append(episodeDetails.Actors,
-				&kodi.Actor{
-					Name:  guestStar,
-					Order: len(episodeDetails.Actors),
-				})
-		}
-		baseName := epf.Filename[0 : len(epf.Filename)-len(filepath.Ext(epf.Filename))]
-		nfoPath := path.Join(epf.FileDir, baseName+".nfo")
-
-		if err = writeNFOFile(episodeDetails, nfoPath); err != nil {
-			fmt.Printf("[!]write nfo %s error: %v\n", nfoPath, err)
-			continue
-		}
-		imagePath := path.Join(epf.FileDir, baseName+".jpg")
-		if !overrideImage && fileExists(imagePath) {
-			continue
-		}
-		imageUrl := tvdb.ImageURL(ep.Filename)
-		verbose.Printf("downloading image [%s](%s)\n", imagePath, imageUrl)
-		if err = downloadToFile(imageUrl, imagePath); err != nil {
-			fmt.Printf("[!]download image [%s](%s) error: %v\n", imagePath, imageUrl, err)
-			continue
+	}
+	baseDir := viper.GetString("baseDir")
+	if baseDir != "" {
+		fmt.Printf("writing tvshow.nfo\n")
+		if err = writeTVShowNFO(baseDir, series, overrideImage); err != nil {
+			fmt.Printf("[!]%v\n", err)
 		}
 	}
 
@@ -242,4 +183,215 @@ func writeNFOFile(v interface{}, fp string) error {
 		return err
 	}
 	return ioutil.WriteFile(fp, buf, 0644)
+}
+
+func writeEpisodeNFO(epf *namer.EpisodeFile, overrideImage bool) (err error) {
+	ep := epf.Episode
+	series := epf.Series
+
+	episodeDetails := kodi.EpisodeDetails{
+		Title:         ep.EpisodeName,
+		OriginalTitle: "",
+		ShowTitle:     ep.EpisodeName,
+		Ratings: []*kodi.Rating{
+			&kodi.Rating{
+				Name:    "tvdb",
+				Max:     10,
+				Default: true,
+				Value:   ep.SiteRating,
+				Votes:   ep.SiteRatingCount,
+			},
+		},
+		Season:  ep.AiredSeason,
+		Episode: ep.AiredEpisodeNumber,
+		Plot:    ep.Overview,
+		Thumbs:  []string{tvdbex.GetEpisodeImageUrl(ep)},
+		UniqueIDs: []*kodi.UniqueID{
+			&kodi.UniqueID{
+				Type:    "tvdb",
+				Default: true,
+				ID:      strconv.Itoa(ep.ID),
+			},
+			&kodi.UniqueID{
+				Type:    "imdb",
+				Default: false,
+				ID:      ep.ImdbID,
+			},
+		},
+		Genres:    series.Genre,
+		Credits:   ep.Writers,
+		Directors: ep.Directors,
+		Premiered: ep.FirstAired,
+		Studios:   []string{series.Network},
+	}
+	actorsMap := map[string]bool{}
+	for _, a := range series.Actors {
+		actorsMap[a.Name] = true
+		episodeDetails.Actors = append(episodeDetails.Actors,
+			&kodi.Actor{
+				Name:  a.Name,
+				Role:  a.Role,
+				Order: a.SortOrder,
+				Thumb: tvdb.ImageURL(a.Image),
+			})
+	}
+	for _, guestStar := range ep.GuestStars {
+		if _, exists := actorsMap[guestStar]; exists {
+			continue
+		}
+		episodeDetails.Actors = append(episodeDetails.Actors,
+			&kodi.Actor{
+				Name:  guestStar,
+				Order: len(episodeDetails.Actors),
+			})
+	}
+	baseName := epf.Filename[0 : len(epf.Filename)-len(filepath.Ext(epf.Filename))]
+	nfoPath := path.Join(epf.FileDir, baseName+".nfo")
+
+	if err = writeNFOFile(episodeDetails, nfoPath); err != nil {
+		return fmt.Errorf("write nfo %s error: %v\n", nfoPath, err)
+	}
+	imgExt := path.Ext(ep.Filename)
+	imagePath := path.Join(epf.FileDir, baseName+"-thumb"+imgExt)
+	if !overrideImage && fileExists(imagePath) {
+		return nil
+	}
+	imageUrl := tvdb.ImageURL(ep.Filename)
+	verbose.Printf("downloading image [%s](%s)\n", imagePath, imageUrl)
+	if err = downloadToFile(imageUrl, imagePath); err != nil {
+		return fmt.Errorf("download image [%s](%s) error: %v\n", imagePath, imageUrl, err)
+	}
+	return nil
+}
+
+func writeTVShowNFO(baseDir string, series *tvdbex.Series, overrideImage bool) (err error) {
+	tvshowPath := path.Join(baseDir, "tvshow.nfo")
+	episodeCount, _ := strconv.Atoi(series.Summary.AiredEpisodes)
+	tvshow := kodi.TVShow{
+		Title:         series.SeriesName,
+		OriginalTitle: series.SeriesName,
+		Ratings: []*kodi.Rating{
+			&kodi.Rating{
+				Name:    "tvdb",
+				Max:     10,
+				Default: true,
+				Value:   series.SiteRating,
+				Votes:   series.SiteRatingCount,
+			},
+		},
+		Season:  len(series.Summary.AiredSeasons),
+		Episode: episodeCount,
+		Plot:    series.Overview,
+		//TagLine:        "",
+		//Thumbs:  nil,
+		//Fanarts: nil,
+		//Mpaa:           "",
+		EpisodeGuide: nil,
+		UniqueIDs: []*kodi.UniqueID{
+			&kodi.UniqueID{
+				Type:    "tvdb",
+				Default: true,
+				ID:      strconv.Itoa(series.ID),
+			},
+			&kodi.UniqueID{
+				Type:    "imdb",
+				Default: false,
+				ID:      series.ImdbID,
+			},
+		},
+		Genres:    series.Genre,
+		Tags:      nil,
+		Premiered: series.FirstAired,
+		Status:    series.Status,
+		Studios:   []string{series.Network},
+		//Trailer:        "",
+		NamedSeasons: series.NamedSeasons,
+	}
+
+	for _, a := range series.Actors {
+		tvshow.Actors = append(tvshow.Actors,
+			&kodi.Actor{
+				Name:  a.Name,
+				Role:  a.Role,
+				Order: a.SortOrder,
+				Thumb: tvdb.ImageURL(a.Image),
+			})
+	}
+
+	imageUrls := make(map[string]string)
+
+	addImage := func(t, fn string) {
+		if _, exits := imageUrls[t]; !exits {
+			imageUrls[t] = tvdb.ImageURL(fn)
+		}
+	}
+	for i, img := range series.Images[tvdbex.ImageTypeKeyFanArt] {
+		tvshow.Fanarts = append(tvshow.Fanarts,
+			&kodi.Thumb{
+				Preview: tvdb.ImageURL(img.Thumbnail),
+				Uri:     tvdb.ImageURL(img.FileName),
+			},
+		)
+		if i == 0 {
+			addImage("fanart", img.FileName)
+		} else {
+			addImage("fanart"+strconv.Itoa(i), img.FileName)
+		}
+	}
+	for k, v := range series.Images {
+		if k == tvdbex.ImageTypeKeyFanArt {
+			continue
+		}
+		for _, img := range v {
+			thumb := &kodi.Thumb{
+				Preview: tvdb.ImageURL(img.Thumbnail),
+				Uri:     tvdb.ImageURL(img.FileName),
+			}
+			switch img.KeyType {
+			case tvdbex.ImageTypeKeyPoster:
+				thumb.Aspect = "poster"
+				addImage("poster", img.FileName)
+			case tvdbex.ImageTypeKeySeries:
+				thumb.Aspect = "banner"
+				addImage("banner", img.FileName)
+			case tvdbex.ImageTypeKeySeason:
+				thumb.Aspect = "poster"
+				thumb.Type = "season"
+				thumb.Season, _ = strconv.Atoi(img.SubKey)
+				if img.SubKey == "0" {
+					addImage("season-specials-poster", img.FileName)
+				} else {
+					addImage(fmt.Sprintf("season%02d-poster", thumb.Season), img.FileName)
+				}
+			case tvdbex.ImageTypeKeySeasonWide:
+				thumb.Aspect = "banner"
+				thumb.Type = "season"
+				thumb.Season, _ = strconv.Atoi(img.SubKey)
+				if img.SubKey == "0" {
+					addImage("season-specials-banner", img.FileName)
+				} else {
+					addImage(fmt.Sprintf("season%02d-banner", thumb.Season), img.FileName)
+				}
+			default:
+				thumb.Aspect = img.KeyType
+			}
+			tvshow.Thumbs = append(tvshow.Thumbs, thumb)
+		}
+	}
+	if err = writeNFOFile(tvshow, tvshowPath); err != nil {
+		return fmt.Errorf("write tvshow.nfo %s error: %v\n", tvshowPath, err)
+	}
+	for k, u := range imageUrls {
+		imgExt := path.Ext(u)
+		imagePath := path.Join(baseDir, k+imgExt)
+		if !overrideImage && fileExists(imagePath) {
+			continue
+		}
+		verbose.Printf("downloading image [%s](%s)\n", imagePath, u)
+		if err = downloadToFile(u, imagePath); err != nil {
+			fmt.Sprintf("[!]download image [%s](%s) error: %v\n", imagePath, u, err)
+		}
+	}
+
+	return nil
 }
