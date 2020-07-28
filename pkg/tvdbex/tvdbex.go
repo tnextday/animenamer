@@ -35,8 +35,11 @@ func NewTVDBEx(apiKey string, language string, customs ...*CustomSeries) (*TVDBE
 		Custom:      make(map[string]*CustomSeries),
 	}
 	for _, c := range customs {
-		anime.Custom[c.SeriesID] = c
+		if c != nil {
+			anime.Custom[c.SeriesID] = c
+		}
 	}
+
 	if err := anime.Client.Login(); err != nil {
 		return nil, err
 	}

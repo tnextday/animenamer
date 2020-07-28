@@ -34,12 +34,12 @@ func LoadCustomSeries(fp string) (*CustomSeries, error) {
 	ext := path.Ext(fp)
 	var series CustomSeries
 	switch ext {
-	case "yml", "yaml":
+	case ".yml", ".yaml":
 		err = yaml.Unmarshal(buf, &series)
-	case "json":
+	case ".json":
 		err = json.Unmarshal(buf, &series)
 	default:
-		err = fmt.Errorf("format %s not support")
+		err = fmt.Errorf("format %s not support", ext)
 	}
 	if err != nil {
 		return nil, err

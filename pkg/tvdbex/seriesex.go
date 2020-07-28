@@ -41,7 +41,8 @@ func NewSeriesEx(s tvdb.Series, custom *CustomSeries) *SeriesEx {
 			seriesEx.EpisodesIndex[aId] = epEx
 		}
 	}
-	if custom != nil && (custom.SeriesID != "" && custom.SeriesID == seriesEx.SeriesID) {
+	if custom != nil &&
+		(custom.SeriesID == "" || (custom.SeriesID != "" && custom.SeriesID == strconv.Itoa(seriesEx.ID))) {
 		if custom.SeriesName != "" {
 			seriesEx.SeriesName = custom.SeriesName
 		}
