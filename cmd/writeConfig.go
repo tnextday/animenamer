@@ -42,5 +42,5 @@ var writeConfigCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(writeConfigCmd)
-	writeConfigCmd.Flags().StringVarP(&configFormat, "format", "f", "yaml", "config file format, yaml or json")
+	writeConfigCmd.Flags().StringVarP(&configFormat, "format", "f", "yml", "config file format, yml or json")
 }

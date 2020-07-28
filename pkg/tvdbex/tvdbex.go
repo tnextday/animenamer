@@ -3,6 +3,7 @@ package tvdbex
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/pioz/tvdb"
@@ -17,19 +18,24 @@ const (
 	ImageTypeKeySeries            = "series"
 )
 
-type TVDB struct {
+type TVDBEx struct {
 	Client      tvdb.Client
 	searchCache map[string]int
-	seriesCache map[int]*Series
+	seriesCache map[int]*SeriesEx
 	Language    string
+	Custom      map[string]*CustomSeries
 }
 
-func NewTVDB(apiKey string, language string) (*TVDB, error) {
-	anime := TVDB{
+func NewTVDBEx(apiKey string, language string, customs ...*CustomSeries) (*TVDBEx, error) {
+	anime := TVDBEx{
 		Client:      tvdb.Client{Apikey: apiKey},
 		Language:    language,
 		searchCache: make(map[string]int),
-		seriesCache: make(map[int]*Series),
+		seriesCache: make(map[int]*SeriesEx),
+		Custom:      make(map[string]*CustomSeries),
+	}
+	for _, c := range customs {
+		anime.Custom[c.SeriesID] = c
 	}
 	if err := anime.Client.Login(); err != nil {
 		return nil, err
@@ -37,7 +43,7 @@ func NewTVDB(apiKey string, language string) (*TVDB, error) {
 	return &anime, nil
 }
 
-func (db *TVDB) Search(q string) (id int, err error) {
+func (db *TVDBEx) Search(q string) (id int, err error) {
 	q = strings.ToLower(strings.TrimSpace(q))
 	if id, exist := db.searchCache[q]; exist {
 		return id, nil
@@ -62,7 +68,7 @@ func (db *TVDB) Search(q string) (id int, err error) {
 	return 0, errors.New("not found")
 }
 
-func (db *TVDB) GetSeries(id int) (*Series, error) {
+func (db *TVDBEx) GetSeriesEx(id int) (*SeriesEx, error) {
 	if series, exists := db.seriesCache[id]; exists {
 		return series, nil
 	}
@@ -76,12 +82,16 @@ func (db *TVDB) GetSeries(id int) (*Series, error) {
 	if err := db.Client.GetSeriesEpisodes(&series, nil); err != nil {
 		return nil, err
 	}
-	s := NewSeries(series)
+	custom := db.Custom[strconv.Itoa(id)]
+	if custom == nil {
+		custom = db.Custom[""]
+	}
+	s := NewSeriesEx(series, custom)
 	db.seriesCache[id] = s
 	return s, nil
 }
 
-func (db *TVDB) GetSeriesActors(series *Series) (err error) {
+func (db *TVDBEx) GetSeriesActors(series *SeriesEx) (err error) {
 
 	if len(series.Actors) > 0 {
 		return nil
@@ -94,7 +104,7 @@ func (db *TVDB) GetSeriesActors(series *Series) (err error) {
 	return nil
 }
 
-func (db *TVDB) GetSeriesSummary(series *Series) (err error) {
+func (db *TVDBEx) GetSeriesSummary(series *SeriesEx) (err error) {
 	db.Client.Language = db.Language
 	err = db.Client.GetSeriesSummary(&series.Series)
 	if err != nil && !tvdb.HaveCodeError(404, err) {
@@ -103,7 +113,7 @@ func (db *TVDB) GetSeriesSummary(series *Series) (err error) {
 	return nil
 }
 
-func (db *TVDB) GetSeriesImages(series *Series) (err error) {
+func (db *TVDBEx) GetSeriesImages(series *SeriesEx) (err error) {
 	if len(series.Images) > 0 {
 		return nil
 	}
@@ -143,7 +153,7 @@ func (db *TVDB) GetSeriesImages(series *Series) (err error) {
 	return nil
 }
 
-func GetEpisodeImageUrl(episode *tvdb.Episode) string {
+func GetEpisodeImageUrl(episode *EpisodeEx) string {
 	if episode == nil || episode.SeriesID == 0 || episode.ID == 0 {
 		return ""
 	}

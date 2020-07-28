@@ -57,6 +57,7 @@ func init() {
 			"'absolute', 'season', 'episode' is the required name.\n")
 	writeNFOCmd.Flags().StringP("baseDir", "b", "", "series base folder to write tvshow.nfo")
 	writeNFOCmd.Flags().Bool("overrideImage", false, "override exists image file")
+	writeNFOCmd.Flags().Bool("downloadAllFanart", false, "download all of fanarts")
 	viper.BindPFlags(writeNFOCmd.Flags())
 }
 
@@ -74,7 +75,7 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 	if apiKey == "" {
 		apiKey = DefaultTvDbApiKey
 	}
-	tvdbEx, err := tvdbex.NewTVDB(apiKey, viper.GetString("language"))
+	tvdbEx, err := tvdbex.NewTVDBEx(apiKey, viper.GetString("language"), loadCustomConfig())
 	if err != nil {
 		fmt.Printf("new tvdb error: %v\n", err)
 		os.Exit(1)
@@ -106,7 +107,7 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 		fmt.Printf("no valid pattern\n")
 		os.Exit(1)
 	}
-	series, err := tvdbEx.GetSeries(es.SeriesId)
+	series, err := tvdbEx.GetSeriesEx(es.SeriesId)
 	if err != nil {
 		fmt.Printf("can't get series from tvdb, error: %v\n", err)
 		os.Exit(1)
@@ -142,14 +143,20 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 		verbose.Printf("processing %s\n",
 			epf.Filename)
 		if err = writeEpisodeNFO(epf, overrideImage); err != nil {
-			fmt.Printf("[!]%v\n", err)
+			fmt.Printf("[E]%v\n", err)
 		}
 	}
 	baseDir := viper.GetString("baseDir")
 	if baseDir != "" {
+		if !path.IsAbs(baseDir) && cfgFile != "" {
+			cfgDir := path.Dir(cfgFile)
+			if baseDir, err = filepath.Rel(cfgDir, baseDir); err != nil {
+				fmt.Printf("[E]%v\n", err)
+			}
+		}
 		fmt.Printf("writing tvshow.nfo\n")
 		if err = writeTVShowNFO(baseDir, series, overrideImage); err != nil {
-			fmt.Printf("[!]%v\n", err)
+			fmt.Printf("[E]%v\n", err)
 		}
 	}
 
@@ -191,7 +198,7 @@ func writeEpisodeNFO(epf *namer.EpisodeFile, overrideImage bool) (err error) {
 
 	episodeDetails := kodi.EpisodeDetails{
 		Title:         ep.EpisodeName,
-		OriginalTitle: "",
+		OriginalTitle: ep.OriginalEpisodeName,
 		ShowTitle:     ep.EpisodeName,
 		Ratings: []*kodi.Rating{
 			&kodi.Rating{
@@ -264,12 +271,12 @@ func writeEpisodeNFO(epf *namer.EpisodeFile, overrideImage bool) (err error) {
 	return nil
 }
 
-func writeTVShowNFO(baseDir string, series *tvdbex.Series, overrideImage bool) (err error) {
+func writeTVShowNFO(baseDir string, series *tvdbex.SeriesEx, overrideImage bool) (err error) {
 	tvshowPath := path.Join(baseDir, "tvshow.nfo")
 	episodeCount, _ := strconv.Atoi(series.Summary.AiredEpisodes)
 	tvshow := kodi.TVShow{
 		Title:         series.SeriesName,
-		OriginalTitle: series.SeriesName,
+		OriginalTitle: series.OriginalSeriesName,
 		Ratings: []*kodi.Rating{
 			&kodi.Rating{
 				Name:    "tvdb",
@@ -325,6 +332,7 @@ func writeTVShowNFO(baseDir string, series *tvdbex.Series, overrideImage bool) (
 			imageUrls[t] = tvdb.ImageURL(fn)
 		}
 	}
+	downloadAllFanarts := viper.GetBool("downloadAllFanart")
 	for i, img := range series.Images[tvdbex.ImageTypeKeyFanArt] {
 		tvshow.Fanarts = append(tvshow.Fanarts,
 			&kodi.Thumb{
@@ -334,7 +342,7 @@ func writeTVShowNFO(baseDir string, series *tvdbex.Series, overrideImage bool) (
 		)
 		if i == 0 {
 			addImage("fanart", img.FileName)
-		} else {
+		} else if downloadAllFanarts {
 			addImage("fanart"+strconv.Itoa(i), img.FileName)
 		}
 	}
@@ -389,9 +397,8 @@ func writeTVShowNFO(baseDir string, series *tvdbex.Series, overrideImage bool) (
 		}
 		verbose.Printf("downloading image [%s](%s)\n", imagePath, u)
 		if err = downloadToFile(u, imagePath); err != nil {
-			fmt.Sprintf("[!]download image [%s](%s) error: %v\n", imagePath, u, err)
+			fmt.Sprintf("[E]download image [%s](%s) error: %v\n", imagePath, u, err)
 		}
 	}
-
 	return nil
 }

@@ -17,9 +17,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/pflag"
 	"os"
 	"path"
+
+	"github.com/spf13/pflag"
 
 	"github.com/cloudfoundry/jibber_jabber"
 	"github.com/spf13/cobra"
@@ -54,7 +55,11 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is animenamer.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is animenamer.yml)")
+	rootCmd.PersistentFlags().String("custom", "animenamer.custom.yml",
+		"custom series info file.\n"+
+			"its support yaml or json.\n"+
+			"(default is animenamer.custom.yml)")
 	rootCmd.PersistentFlags().String("apikey", "", "the tvdb apikey")
 	rootCmd.PersistentFlags().String("seriesId", "", "explicitly set the show id for TVdb to use (applies to all files)")
 	rootCmd.PersistentFlags().StringP("name", "n", "", "override the parsed series name with this (applies to all files)")
@@ -65,13 +70,15 @@ func init() {
 	rootCmd.Flags().String("subtitleExt", "ass,ssa,srt,sub", "subtitle file extensions")
 	rootCmd.Flags().StringSliceP("pattern", "p", nil,
 		"filename regex named pattern, \n"+
-			"'series', 'seriesId', 'absolute', 'season', 'episode', 'ext' is the reserved name, its may be override by tvdb info.\n"+
+			"'series', 'seriesId', 'absolute', 'season', 'episode', 'ext' is the reserved name, \n"+
+			"its may be override by tvdb info.\n"+
 			`example: ^(?P<name>\.+)\.(?P<absolute>\d+).*\.(?P<ext>\w+)$`)
 	//rootCmd.MarkFlagRequired("pattern")
 	rootCmd.Flags().String("format", "{series}.S{season.2}E{episode.2}.[{absolute.3}].{ext}",
 		"new filename format. variables:\n"+
-			"'series', 'seriesId', 'season', 'episode', 'absolute', 'date', 'title', 'ext' and named variables in filename pattern matched,\n"+
-			"and you can use {variable.n} for number padding.\n")
+			"'series', 'seriesId', 'season', 'episode', 'absolute', 'date', 'title', 'ext'\n"+
+			"and named variables in filename pattern matched,\n"+
+			"you can use {variable.n} for number padding.\n")
 	rootCmd.Flags().String("replaceSpace", "", "replace the whitespace with this value in new filename")
 
 	lang, _ := jibber_jabber.DetectLanguage()
@@ -123,7 +130,8 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 	if apiKey == "" {
 		apiKey = DefaultTvDbApiKey
 	}
-	tvdb, err := tvdbex.NewTVDB(apiKey, viper.GetString("language"))
+
+	tvdb, err := tvdbex.NewTVDBEx(apiKey, viper.GetString("language"), loadCustomConfig())
 	if err != nil {
 		fmt.Printf("new tvdb error: %v\n", err)
 		os.Exit(1)
@@ -171,11 +179,24 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 						fmt.Printf("%s has rename to %s\n", o, n)
 					} else {
 						fmt.Printf("rename %s to %s error: %v\n", o, n, err)
-
 					}
 				}
 			}
 		}
 	}
+}
 
+func loadCustomConfig() *tvdbex.CustomSeries {
+	fp := viper.GetString("custom")
+	if fp == "" {
+		return nil
+	}
+	c, e := tvdbex.LoadCustomSeries(fp)
+	if e == nil {
+		fmt.Printf("[I] use custom series info in %s\n", fp)
+		return c
+	} else {
+		fmt.Printf("[E] load custom series info in %s error, %v\n", fp, e)
+		return nil
+	}
 }

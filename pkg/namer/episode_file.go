@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pioz/tvdb"
 	"github.com/tnextday/animenamer/pkg/utils"
 
 	"github.com/tnextday/animenamer/pkg/tvdbex"
@@ -16,8 +15,8 @@ type EpisodeFile struct {
 	Filename  string
 	Infos     Infos
 	Subtitles []string
-	Series    *tvdbex.Series
-	Episode   *tvdb.Episode
+	Series    *tvdbex.SeriesEx
+	Episode   *tvdbex.EpisodeEx
 }
 
 const (

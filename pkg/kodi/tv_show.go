@@ -54,9 +54,9 @@ type Rating struct {
 }
 
 type NamedSeason struct {
-	XMLName xml.Name `xml:"namedseason"`
-	Number  int      `xml:"number,attr"`
-	Name    string   `xml:",innerxml"`
+	XMLName xml.Name `xml:"namedseason" json:"-" yaml:"-"`
+	Number  int      `xml:"number,attr" json:"number" yaml:"number"`
+	Name    string   `xml:",innerxml" json:"name" yaml:"name"`
 }
 
 type Thumb struct {

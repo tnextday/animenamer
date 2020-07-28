@@ -61,7 +61,7 @@ func missingRun(cmd *cobra.Command, args []string) {
 	if apiKey == "" {
 		apiKey = DefaultTvDbApiKey
 	}
-	tvdb, err := tvdbex.NewTVDB(apiKey, viper.GetString("language"))
+	tvdb, err := tvdbex.NewTVDBEx(apiKey, viper.GetString("language"))
 	if err != nil {
 		fmt.Printf("new tvdb error: %v\n", err)
 		os.Exit(1)
@@ -81,7 +81,7 @@ func missingRun(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 	}
-	series, err := tvdb.GetSeries(es.SeriesId)
+	series, err := tvdb.GetSeriesEx(es.SeriesId)
 	if err != nil {
 		fmt.Printf("can't get series from tvdb, error: %v\n", err)
 		os.Exit(1)

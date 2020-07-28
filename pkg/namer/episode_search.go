@@ -13,8 +13,6 @@ import (
 
 	"github.com/tnextday/animenamer/pkg/verbose"
 
-	"github.com/pioz/tvdb"
-
 	"github.com/tnextday/animenamer/pkg/tvdbex"
 )
 
@@ -22,7 +20,7 @@ type EpisodeSearch struct {
 	Filters      []*regexp.Regexp
 	MediaExt     FileExt
 	SubtitlesExt FileExt
-	TVDB         *tvdbex.TVDB
+	TVDB         *tvdbex.TVDBEx
 	SeriesName   string
 	SeriesId     int
 }
@@ -132,8 +130,8 @@ func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filenameList [
 		infos[InfoKeySeriesId] = es.SeriesId
 	}
 	var (
-		series  *tvdbex.Series
-		episode *tvdb.Episode
+		series  *tvdbex.SeriesEx
+		episode *tvdbex.EpisodeEx
 	)
 	if es.TVDB != nil {
 		seriesId := infos.GetInt(InfoKeySeriesId)
@@ -144,7 +142,7 @@ func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filenameList [
 			}
 		}
 		if seriesId != 0 {
-			series, err = es.TVDB.GetSeries(seriesId)
+			series, err = es.TVDB.GetSeriesEx(seriesId)
 			if err != nil {
 				verbose.Printf("get series (%d) error: %v\n", seriesId, err)
 			}
