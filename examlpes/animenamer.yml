@@ -1,4 +1,4 @@
-apikey: "A74D017DA5F2C3B0"
+apikey: ""
 basedir: "~/GINTAMA"
 dryrun: false
 format: '{series}.S{season.2}E{episode.2}.[{absolute.3}].{ext}'
