@@ -1,0 +1,12 @@
+seriesId: 79895
+seriesName: GINTAMA
+overview: 简介
+namedSeason:
+  - number: 1
+    name: 第一季
+  - number: 2
+    name: 第二季
+episodes:
+  - absolute: 1
+    name: 第一集
+    overview: 第一集简介

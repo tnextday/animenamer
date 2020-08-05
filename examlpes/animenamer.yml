@@ -1,0 +1,24 @@
+apikey: "A74D017DA5F2C3B0"
+basedir: "~/GINTAMA"
+dryrun: false
+format: '{series}.S{season.2}E{episode.2}.[{absolute.3}].{ext}'
+language: ""
+mediaext: mkv,mp4,avi,rm,rmvb,mov,m4v,wmv
+missing:
+  pattern:
+  - (?i).*s(?P<season>\d+)e(?P<episode>\d+).*
+  - (?i).*(?P<season>\d+)x(?P<episode>\d+).*
+name: "GINTAMA"
+pattern:
+  - .*\[GINTAMA\]\[(?P<absolute>\d+)\].*\.mp4
+  - 银魂.*第(?P<absolute>\d+)集\.mkv
+recursive: true
+renamesubtitle: true
+replacespace: ""
+seriesid: 79895
+subtitleext: ass,ssa,srt,sub
+verbose: false
+writenfo:
+  pattern:
+  - (?i).*s(?P<season>\d+)e(?P<episode>\d+).*
+  - (?i).*(?P<season>\d+)x(?P<episode>\d+).*
