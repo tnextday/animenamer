@@ -83,23 +83,26 @@ func (es *EpisodeSearch) ListEpisodeFile(fp string, recursive bool) ([]*EpisodeF
 		dirs.Remove(e)
 		dirname := e.Value.(string)
 		if fileInfos, err := ioutil.ReadDir(dirname); err == nil {
-			var filenameList []string
+			var filesInSameDir []string
 			for _, fi := range fileInfos {
+				if strings.HasPrefix(fi.Name(), ".") {
+					continue
+				}
 				if fi.IsDir() && recursive {
 					dirs.PushBack(path.Join(dirname, fi.Name()))
 				} else {
-					filenameList = append(filenameList, fi.Name())
+					filesInSameDir = append(filesInSameDir, fi.Name())
 				}
 			}
 			if fileName != "" {
-				if mf, err := es.newEpisodeFile(dirname, fileName, filenameList); err == nil {
+				if mf, err := es.newEpisodeFile(dirname, fileName, filesInSameDir); err == nil {
 					mediaFileList = append(mediaFileList, mf)
 				} else {
 					verbose.Printf("newEpisodeFile (%s) err: %v\n", path.Join(dirname, fileName), err)
 				}
 			} else {
-				for _, fn := range filenameList {
-					if mf, err := es.newEpisodeFile(dirname, fn, filenameList); err == nil {
+				for _, fn := range filesInSameDir {
+					if mf, err := es.newEpisodeFile(dirname, fn, filesInSameDir); err == nil {
 						mediaFileList = append(mediaFileList, mf)
 					} else {
 						verbose.Printf("newEpisodeFile (%s) err: %v\n", path.Join(dirname, fn), err)
@@ -113,7 +116,7 @@ func (es *EpisodeSearch) ListEpisodeFile(fp string, recursive bool) ([]*EpisodeF
 	return mediaFileList, nil
 }
 
-func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filenameList []string) (*EpisodeFile, error) {
+func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filesInSameDir []string) (*EpisodeFile, error) {
 	ext := filepath.Ext(filename)
 	if !es.MediaExt.Contains(ext) {
 		return nil, errors.New("is not media file")
@@ -167,7 +170,7 @@ func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filenameList [
 		FileDir:   dirname,
 		Filename:  filename,
 		Infos:     infos,
-		Subtitles: searchSubtitles(filename, filenameList, es.SubtitlesExt),
+		Subtitles: searchSubtitles(filename, filesInSameDir, es.SubtitlesExt),
 		Series:    series,
 		Episode:   episode,
 	}
@@ -208,10 +211,10 @@ func multiMatchEpisodeFile(filters []*regexp.Regexp, filename string) (infos Inf
 	return
 }
 
-func searchSubtitles(mediaName string, filenameList []string, subtitlesExt FileExt) []string {
+func searchSubtitles(mediaName string, filesInSameDir []string, subtitlesExt FileExt) []string {
 	var subtitles []string
 	baseName := mediaName[0 : len(mediaName)-len(filepath.Ext(mediaName))]
-	for _, fn := range filenameList {
+	for _, fn := range filesInSameDir {
 		if !subtitlesExt.Is(fn) {
 			continue
 		}
