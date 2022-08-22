@@ -7,7 +7,7 @@ import (
 	"path"
 
 	"github.com/tnextday/animenamer/pkg/kodi"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type CustomSeries struct {
