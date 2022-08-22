@@ -1,7 +1,7 @@
 # animenamer
 
 animenamer 是一个动画（anime）重命名工具，它可以使用`集数`（AbsoluteNumber）或者
-`季集`（season&episode）来从 [thetvdb](thetvdb.com) 上获取信息。
+`季集`（season&episode）来从 [thetvdb](thetvdb.com) 上获取信息，来重命名文件，使其文件名对搜刮器更友好。
 
 ## 主要特性
 
