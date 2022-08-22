@@ -2,4 +2,5 @@ release.env
 ./animenamer.yml
 ./animenamer.custom.yml
 build/
+.vscode/
 
