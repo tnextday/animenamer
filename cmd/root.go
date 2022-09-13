@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"regexp"
+	"strconv"
 
 	"github.com/spf13/pflag"
 
@@ -80,7 +83,7 @@ func init() {
 			"and named variables in filename pattern matched,\n"+
 			"you can use {variable.n} for number padding.\n")
 	rootCmd.Flags().String("replaceSpace", "", "replace the whitespace with this value in new filename")
-
+	rootCmd.Flags().StringP("log", "l", "rename", "the rename log name for recovery")
 	lang, _ := jibber_jabber.DetectLanguage()
 	rootCmd.PersistentFlags().String("language", lang, "preferred language")
 	rootCmd.PersistentFlags().BoolP("recursive", "r", true, "descend more than one level directories supplied as arguments")
@@ -159,6 +162,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 	renameSubtitle := viper.GetBool("renameSubtitle")
 	replaceSpaceWith := viper.GetString("replaceSpace")
 	dryRun := viper.GetBool("dryRun")
+	logName := viper.GetString("log")
 	for _, fp := range args {
 		fmt.Printf("processing %s\n", fp)
 		episodeFiles, err := es.ListEpisodeFile(fp, recursive)
@@ -167,6 +171,16 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 			continue
 		}
 		fmt.Printf("found %d episode files\n", len(episodeFiles))
+		var logFile *os.File
+		if !dryRun {
+			lfp := makeLogName(fp, logName)
+			if logFile, err = os.Create(lfp); err != nil {
+				fmt.Printf("error create log file %s: %s", lfp, err)
+				continue
+			}
+			logFile.WriteString(fmt.Sprintf("# rename files in %s\n", fp))
+			defer logFile.Close()
+		}
 		for _, ef := range episodeFiles {
 			renames := ef.Renames(format, replaceSpaceWith, renameSubtitle)
 			if dryRun {
@@ -175,8 +189,12 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 				}
 			} else {
 				for o, n := range renames {
-					if err := os.Rename(path.Join(ef.FileDir, o), path.Join(ef.FileDir, n)); err == nil {
+					src := path.Join(ef.FileDir, o)
+					dst := path.Join(ef.FileDir, n)
+					if err := os.Rename(src, dst); err == nil {
 						fmt.Printf("%s has rename to %s\n", o, n)
+						logFile.WriteString(fmt.Sprintf("R: '%s' -> '%s'\n", src, dst))
+						logFile.Sync()
 					} else {
 						fmt.Printf("rename %s to %s error: %v\n", o, n, err)
 					}
@@ -199,4 +217,25 @@ func loadCustomConfig() *tvdbex.CustomSeries {
 		fmt.Printf("[E] load custom series info in %s error, %v\n", fp, e)
 		return nil
 	}
+}
+
+func makeLogName(dir, name string) string {
+	logIndex := 0
+	iRe := regexp.MustCompile(fmt.Sprintf(`%s\.(\d+)\.log`, name))
+	if files, err := filepath.Glob(fmt.Sprintf("%s/%s.*.log", dir, name)); err != nil {
+		for _, f := range files {
+			_, fn := filepath.Split(f)
+			matchs := iRe.FindStringSubmatch(fn)
+
+			if len(matchs) != 2 {
+				continue
+			}
+			if i, err := strconv.Atoi(matchs[1]); err == nil {
+				if i > logIndex {
+					logIndex = i
+				}
+			}
+		}
+	}
+	return path.Join(dir, fmt.Sprintf("%s.%d.log", name, logIndex))
 }
