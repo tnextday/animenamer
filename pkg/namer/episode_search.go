@@ -100,6 +100,7 @@ func (es *EpisodeSearch) ListEpisodeFile(fp string, recursive bool) ([]*EpisodeF
 				} else {
 					verbose.Printf("newEpisodeFile (%s) err: %v\n", path.Join(dirname, fileName), err)
 				}
+				break //当输入是一个文件时，只处理这个文件
 			} else {
 				for _, fn := range filesInSameDir {
 					if mf, err := es.newEpisodeFile(dirname, fn, filesInSameDir); err == nil {
