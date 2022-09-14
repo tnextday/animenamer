@@ -23,7 +23,8 @@ all: local
 clean:
 	go clean -i $(GO_FLAGS) $(SOURCE_DIR)
 	rm -f $(BINARY)
-	rm -rf linux
+	rm -rf build
+	rm -rf _tests
 
 fmt:
 	goimports -w .
@@ -34,6 +35,7 @@ proxy:
 build:
 	mkdir -p build/$(GOOS)-$(GOARCH)
 	go build $(GO_LDFLAGS) $(GO_FLAGS) -o build/$(GOOS)-$(GOARCH)/$(BINARY) $(SOURCE_DIR)
+	ln -sf $(GOOS)-$(GOARCH)/$(BINARY) build/$(BINARY)
 
 local: proxy build
 
