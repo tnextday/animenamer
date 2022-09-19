@@ -3,4 +3,5 @@ release.env
 ./animenamer.custom.yml
 build/
 .vscode/
+_tests/
 
