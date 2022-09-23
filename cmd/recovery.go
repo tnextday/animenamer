@@ -53,7 +53,7 @@ func recoveryRun(cmd *cobra.Command, args []string) {
 	for _, logFile := range args {
 		readFile, err := os.Open(logFile)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("[E] %v\n", err)
 			continue
 		}
 		fileScanner := bufio.NewScanner(readFile)
@@ -70,8 +70,11 @@ func recoveryRun(cmd *cobra.Command, args []string) {
 			src := path.Join(baseDir, matches[2])
 			if !dryRun {
 				fmt.Printf("recovery %s to %s\n", src, dst)
+				if _, err := os.Stat(dst); err == nil {
+					fmt.Printf("[E] %s exists, skipping recovery %s\n", dst, src)
+				}
 				if err := os.Rename(src, dst); err != nil {
-					fmt.Printf("rename failed: %v\n", err)
+					fmt.Printf("[E] %v\n", err)
 				}
 			} else {
 				fmt.Printf("[dry] recovery %s to %s\n", src, dst)

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/spf13/pflag"
 
@@ -144,7 +145,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 
 		tvdb, err = tvdbex.NewTVDBEx(apiKey, viper.GetString("language"), loadCustomConfig())
 		if err != nil {
-			fmt.Printf("new tvdb error: %v\n", err)
+			fmt.Printf("[E] new tvdb error: %v\n", err)
 			os.Exit(1)
 		}
 	}
@@ -159,11 +160,11 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 	}
 	for _, p := range viper.GetStringSlice("pattern") {
 		if err = es.AddPattern(p); err != nil {
-			fmt.Printf("parse pattern (%s) error: %v\n", p, err)
+			fmt.Printf("[E] parse pattern (%s) %v\n", p, err)
 		}
 	}
 	if len(es.Filters) == 0 {
-		fmt.Println("no valid pattern")
+		fmt.Println("[E] no valid pattern")
 		os.Exit(1)
 	}
 
@@ -177,15 +178,17 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 		fmt.Printf("processing %s\n", fp)
 		episodeFiles, err := es.ListEpisodeFile(fp, recursive)
 		if err != nil {
-			fmt.Printf("error: %v\n", err)
+			fmt.Printf("[E] %v\n", err)
 			continue
 		}
 		fmt.Printf("found %d episode files\n", len(episodeFiles))
-		var logFile *os.File
+		var (
+			logFile *os.File
+		)
 		if !dryRun {
 			lfp := utils.MakeIncrementLog(fp, logName)
 			if logFile, err = os.Create(lfp); err != nil {
-				fmt.Printf("error create log file %s: %s", lfp, err)
+				fmt.Printf("[E] create log file %s: %s", lfp, err)
 				continue
 			}
 			logFile.WriteString(fmt.Sprintf("# rename files in %s\n", fp))
@@ -201,9 +204,21 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 				for o, n := range renames {
 					src := path.Join(ef.FileDir, o)
 					dst := path.Join(ef.FileDir, n)
+					if _, err := os.Stat(dst); err == nil {
+						fmt.Printf("[E] %s exists, skipping rename %s\n", dst, src)
+						continue
+					}
 					if err := os.Rename(src, dst); err == nil {
 						fmt.Printf("%s has rename to %s\n", o, n)
-						logFile.WriteString(fmt.Sprintf("R: '%s' -> '%s'\n", src, dst))
+						rel_src, err := filepath.Rel(fp, src)
+						if err != nil {
+							fmt.Printf("[E] %s\n", err)
+						}
+						rel_dst, err := filepath.Rel(fp, dst)
+						if err != nil {
+							fmt.Printf("[E] %s\n", err)
+						}
+						logFile.WriteString(fmt.Sprintf("R: '%s' -> '%s'\n", rel_src, rel_dst))
 						logFile.Sync()
 					} else {
 						fmt.Printf("rename %s to %s error: %v\n", o, n, err)
