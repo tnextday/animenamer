@@ -23,6 +23,7 @@ type EpisodeSearch struct {
 	TVDB         *tvdbex.TVDBEx
 	SeriesName   string
 	SeriesId     int
+	RegexpOnly   bool
 }
 
 func contains(slice []string, e string) bool {
@@ -39,15 +40,17 @@ func (es *EpisodeSearch) AddPattern(pattern string) error {
 	if err != nil {
 		return err
 	}
-	names := re.SubexpNames()
-	if es.SeriesName == "" && es.SeriesId == 0 {
-		if !(contains(names, InfoKeySeries) || contains(names, InfoKeySeriesId)) {
-			return errors.New("series or seriesId must be defined")
+	if !es.RegexpOnly {
+		names := re.SubexpNames()
+		if es.SeriesName == "" && es.SeriesId == 0 {
+			if !(contains(names, InfoKeySeries) || contains(names, InfoKeySeriesId)) {
+				return errors.New("series or seriesId must be defined")
+			}
 		}
-	}
-	if !(contains(names, InfoKeyAbsolute) ||
-		(contains(names, InfoKeySeason) && contains(names, InfoKeyEpisode))) {
-		return errors.New("absolute or season&episode must be defined")
+		if !(contains(names, InfoKeyAbsolute) ||
+			(contains(names, InfoKeySeason) && contains(names, InfoKeyEpisode))) {
+			return errors.New("absolute or season&episode must be defined")
+		}
 	}
 	es.Filters = append(es.Filters, re)
 	return nil
@@ -137,7 +140,7 @@ func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filesInSameDir
 		series  *tvdbex.SeriesEx
 		episode *tvdbex.EpisodeEx
 	)
-	if es.TVDB != nil {
+	if !es.RegexpOnly && es.TVDB != nil {
 		seriesId := infos.GetInt(InfoKeySeriesId)
 		if seriesId == 0 {
 			seriesId, err = es.TVDB.Search(infos.GetString(InfoKeySeries))

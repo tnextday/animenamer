@@ -82,6 +82,9 @@ func init() {
 			"you can use {variable.n} for number padding.\n")
 	rootCmd.Flags().String("replaceSpace", "", "replace the whitespace with this value in new filename")
 	rootCmd.Flags().StringP("log", "l", "rename", "the rename log name for recovery")
+	rootCmd.Flags().BoolP("regexpOnly", "R", false,
+		"use regexp only to rename files without getting information from the web, \n"+
+			"in this mode, only 'ext' is a reserved name")
 	lang, _ := jibber_jabber.DetectLanguage()
 	rootCmd.PersistentFlags().String("language", lang, "preferred language")
 	rootCmd.PersistentFlags().BoolP("recursive", "r", true, "descend more than one level directories supplied as arguments")
@@ -127,15 +130,23 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 			verbose.Printf("[V] %s: %v\n", k, v)
 		}
 	}
-	apiKey := viper.GetString("apikey")
-	if apiKey == "" {
-		apiKey = DefaultTvDbApiKey
-	}
+	regexpOnly := viper.GetBool("regexpOnly")
+	var (
+		tvdb *tvdbex.TVDBEx
+		err  error
+	)
 
-	tvdb, err := tvdbex.NewTVDBEx(apiKey, viper.GetString("language"), loadCustomConfig())
-	if err != nil {
-		fmt.Printf("new tvdb error: %v\n", err)
-		os.Exit(1)
+	if !regexpOnly {
+		apiKey := viper.GetString("apikey")
+		if apiKey == "" {
+			apiKey = DefaultTvDbApiKey
+		}
+
+		tvdb, err = tvdbex.NewTVDBEx(apiKey, viper.GetString("language"), loadCustomConfig())
+		if err != nil {
+			fmt.Printf("new tvdb error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	es := namer.EpisodeSearch{
@@ -144,6 +155,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 		TVDB:         tvdb,
 		SeriesName:   viper.GetString("name"),
 		SeriesId:     viper.GetInt("seriesId"),
+		RegexpOnly:   regexpOnly,
 	}
 	for _, p := range viper.GetStringSlice("pattern") {
 		if err = es.AddPattern(p); err != nil {
