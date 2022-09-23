@@ -19,9 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
-	"regexp"
-	"strconv"
 
 	"github.com/spf13/pflag"
 
@@ -29,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tnextday/animenamer/pkg/namer"
 	"github.com/tnextday/animenamer/pkg/tvdbex"
+	"github.com/tnextday/animenamer/pkg/utils"
 	"github.com/tnextday/animenamer/pkg/verbose"
 
 	"github.com/spf13/viper"
@@ -173,7 +171,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 		fmt.Printf("found %d episode files\n", len(episodeFiles))
 		var logFile *os.File
 		if !dryRun {
-			lfp := makeLogName(fp, logName)
+			lfp := utils.MakeIncrementLog(fp, logName)
 			if logFile, err = os.Create(lfp); err != nil {
 				fmt.Printf("error create log file %s: %s", lfp, err)
 				continue
@@ -217,25 +215,4 @@ func loadCustomConfig() *tvdbex.CustomSeries {
 		fmt.Printf("[E] load custom series info in %s error, %v\n", fp, e)
 		return nil
 	}
-}
-
-func makeLogName(dir, name string) string {
-	logIndex := 0
-	iRe := regexp.MustCompile(fmt.Sprintf(`%s\.(\d+)\.log`, name))
-	if files, err := filepath.Glob(fmt.Sprintf("%s/%s.*.log", dir, name)); err != nil {
-		for _, f := range files {
-			_, fn := filepath.Split(f)
-			matchs := iRe.FindStringSubmatch(fn)
-
-			if len(matchs) != 2 {
-				continue
-			}
-			if i, err := strconv.Atoi(matchs[1]); err == nil {
-				if i > logIndex {
-					logIndex = i
-				}
-			}
-		}
-	}
-	return path.Join(dir, fmt.Sprintf("%s.%d.log", name, logIndex))
 }

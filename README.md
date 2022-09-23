@@ -69,6 +69,8 @@ animenamer [flags] <anime-files>
 
 *正则表达式使用的是 re2 语法，详细语法请访问 [re2 Syntax](https://github.com/google/re2/wiki/Syntax)*。
 
+*[regular expression tester](https://regoio.herokuapp.com/)*
+
 #### 正则表达式参数
 
 animenamer 使用正则表达式中的`命名分组`来提取文件名中的剧集信息，命名分组的格式为`(?P<name>re)`

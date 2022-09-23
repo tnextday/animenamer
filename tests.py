@@ -7,13 +7,14 @@ import shutil
 import unittest
 from pathlib import Path, PurePath
 import json
-from unittest import mock
 
 _test_dir = "_tests"
 _app_path = "build/animenamer"
+_tvdb_apikey = "Z5SC1ZD07NNS8TDC"
 
 class MockFiles(unittest.TestCase):
     def __init__(self, name, file_list):
+        super().__init__()
         self.name = name
         self.base_dir = PurePath(_test_dir).joinpath(name)
         for file in file_list:
@@ -47,12 +48,14 @@ class TestAnimeRenamer(unittest.TestCase):
             return str(p)
         
         cmds = [_app_path] 
+        # cmds += ["-v"]
 
         if config is not None:
             cmds += ["-c", write_config(config, "animenamer.json")]       
         if custom is not None:
             cmds += ["--custom", write_config(custom, "animenamer.custom.json")]       
 
+        cmds += []
         cmds += options
         cmds += [str(mock_fs.base_dir)]
 
@@ -65,19 +68,21 @@ class TestAnimeRenamer(unittest.TestCase):
         files = [
             ("1-201.BDRIP.720P.X264-10bit_AAC/银魂.Gintama.003.mp4","Gintama.S01E03.[003].mp4"),
             ("1-201.BDRIP.720P.X264-10bit_AAC/银魂.Gintama.003.chs.ass","Gintama.S01E03.[003].chs.ass"),
-            ("银魂第二季.1080p.x264_AAC/银魂.Gintama.202.mkv", "Gintama.S05E02.[202].mkv"),
-            ("银魂第二季.1080p.x264_AAC/银魂.Gintama.202.ass", "Gintama.S05E02.[202].ass"),
+            ("银魂第二季.1080p.x264_AAC/银魂.Gintama.202.mkv", "Gintama.S05E01.[202].mkv"),
+            ("银魂第二季.1080p.x264_AAC/银魂.Gintama.202.ass", "Gintama.S05E01.[202].ass"),
             ("银魂第二季.1080p.x264_AAC/银魂.Gintama.203.ass", "银魂.Gintama.203.ass"),
-            ("op/海贼王第10集.mkv", "OnePiece.S01E10.[10].mkv")
+            ("op/海贼王第10集.mkv", "One Piece.S02E02.[010].mkv")
         ]
         mock_fs = MockFiles("anime_ranme", [x[0] for x in files])
         options = [
-            # "-n", "Gintama", 
-            "-p", r"银魂\.(?P<name>.+)\.(?P<absolute>\d+)\.(?P<ext>\w{2,3})",
-            "-p", r"(?P<name>海贼王)第(?P<absolute>\d+)\.(?P<ext>\w{2,3})",
+            "--apikey", _tvdb_apikey,
+            "--language", "en",
+            "-p", r"银魂\.(?P<series>.+)\.(?P<absolute>\d+)\.(?P<ext>\w+?)$",
+            "-p", r"(?P<series>海贼王)第(?P<absolute>\d+)集\.(?P<ext>\w+?)$",
             "--format", r"{series}.S{season.2}E{episode.2}.[{absolute.3}].{ext}",
         ]
         o = self.run_app(options, mock_fs)
+        # print(o)
         for r in files:
             mock_fs.check_rename(r[0], r[1])
 
