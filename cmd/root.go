@@ -85,7 +85,7 @@ func init() {
 	lang, _ := jibber_jabber.DetectLanguage()
 	rootCmd.PersistentFlags().String("language", lang, "preferred language")
 	rootCmd.PersistentFlags().BoolP("recursive", "r", true, "descend more than one level directories supplied as arguments")
-	rootCmd.Flags().BoolP("dryRun", "d", false, "only print the renames")
+	rootCmd.PersistentFlags().BoolP("dryRun", "d", false, "only print the renames")
 
 	rootCmd.Flags().SortFlags = false
 	viper.BindPFlags(rootCmd.Flags())
