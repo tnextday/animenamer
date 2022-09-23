@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,12 +17,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/spf13/viper"
 	"github.com/tnextday/animenamer/pkg/namer"
 	"github.com/tnextday/animenamer/pkg/tvdbex"
 	"github.com/tnextday/animenamer/pkg/verbose"
-	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -37,7 +38,7 @@ var missingCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(missingCmd)
-	missingCmd.Flags().StringSliceP("missing.pattern", "p",
+	missingCmd.Flags().StringSliceP("pattern", "p",
 		[]string{
 			`(?i).*s(?P<season>\d+)e(?P<episode>\d+).*`,
 			`(?i).*(?P<season>\d+)x(?P<episode>\d+).*`,
@@ -86,7 +87,7 @@ func missingRun(cmd *cobra.Command, args []string) {
 		fmt.Printf("can't get series from tvdb, error: %v\n", err)
 		os.Exit(1)
 	}
-	for _, p := range viper.GetStringSlice("missing.pattern") {
+	for _, p := range viper.GetStringSlice("pattern") {
 		if err = es.AddPattern(p); err != nil {
 			fmt.Printf("parse pattern (%s) error: %v\n", p, err)
 		}
