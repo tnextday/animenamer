@@ -86,6 +86,26 @@ class TestAnimeRenamer(unittest.TestCase):
         for r in files:
             mock_fs.check_rename(r[0], r[1])
 
+    def test_regexp_rename(self):
+        files = [
+            ("1-201.BDRIP.720P.X264-10bit_AAC/银魂.Gintama.003.mp4","Gintama.[003].mp4"),
+            ("1-201.BDRIP.720P.X264-10bit_AAC/银魂.Gintama.003.chs.ass","Gintama.[003].chs.ass"),
+            ("银魂第二季.1080p.x264_AAC/银魂.Gintama.202.mkv", "Gintama.[202].mkv"),
+            ("银魂第二季.1080p.x264_AAC/银魂.Gintama.202.ass", "Gintama.[202].ass"),
+            ("银魂第二季.1080p.x264_AAC/银魂.Gintama.203.ass", "银魂.Gintama.203.ass"),
+            ("op/海贼王第10集.mkv", "海贼王.[010].mkv")
+        ]
+        mock_fs = MockFiles("regexp_ranme", [x[0] for x in files])
+        options = [
+            "-R",
+            "-p", r"银魂\.(?P<name>.+)\.(?P<absolute>\d+)\.\w+?$",
+            "-p", r"(?P<name>海贼王)第(?P<absolute>\d+)集\.\w+?$",
+            "--format", r"{name}.[{absolute.3}].{ext}",
+        ]
+        o = self.run_app(options, mock_fs)
+        for r in files:
+            mock_fs.check_rename(r[0], r[1])
+
     def test_recovery(self):
         pass
 
@@ -93,6 +113,7 @@ class TestAnimeRenamer(unittest.TestCase):
         pass
 
     def teardown(self):
+        # shutil.rmtree(_test_dir)
         pass
 
 
