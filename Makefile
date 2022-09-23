@@ -6,12 +6,13 @@ GO_PROXY = https://goproxy.io
 GIT_TAG = `git describe --tags`
 GOOS = `go env GOHOSTOS`
 GOARCH = `go env GOHOSTARCH`
+TVDB_APIKEY = Z5SC1ZD07NNS8TDC
 
 GO_FLAGS = #-v -race
 GO_LDFLAGS = -ldflags "\
  -X github.com/tnextday/animenamer/cmd.AppVersion=$(GIT_TAG)\
  -X github.com/tnextday/animenamer/cmd.BuildTime=`date '+%Y-%m-%d_%H:%M:%S'`\
- -X github.com/tnextday/animenamer/cmd.DefaultTvDbApiKey=${TVDB_API_KEY}\
+ -X github.com/tnextday/animenamer/cmd.DefaultTvDbApiKey=${TVDB_APIKEY}\
 "
 
 SOURCE_DIR = ./
