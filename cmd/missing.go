@@ -38,7 +38,7 @@ var missingCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(missingCmd)
-	missingCmd.Flags().StringSliceP("pattern", "p",
+	missingCmd.Flags().StringSliceP("missing.pattern", "p",
 		[]string{
 			`(?i).*s(?P<season>\d+)e(?P<episode>\d+).*`,
 			`(?i).*(?P<season>\d+)x(?P<episode>\d+).*`,
