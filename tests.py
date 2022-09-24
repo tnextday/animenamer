@@ -34,9 +34,6 @@ class MockFiles(unittest.TestCase):
     def check_exists(self, filepath):
         self.assertTrue(Path(self.base_dir.join(filepath)).exists())
     
-    def tearDown(self):
-        shutil.rmtree(str(self.base_dir))
-    
 
 class TestAnimeRenamer(unittest.TestCase):
 
@@ -109,13 +106,14 @@ class TestAnimeRenamer(unittest.TestCase):
     def test_recovery(self):
         pass
 
-    def setUp(self):
-        pass
+    def setup(self):
+        print ("This is setUp")
 
-    def teardown(self):
-        # shutil.rmtree(_test_dir)
-        pass
-
+    def tearDown(self):
+        try:
+            shutil.rmtree(_test_dir)
+        except:
+            pass
 
 if __name__ == '__main__':
     unittest.main()
