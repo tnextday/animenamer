@@ -81,13 +81,13 @@ func init() {
 	//rootCmd.MarkFlagRequired("pattern")
 	rootCmd.Flags().String("format", "{series}.S{season.2}E{episode.2}.[{absolute.3}].{ext}",
 		"new filename format. variables:\n"+
-			"'series', 'seriesId', 'season', 'seasonTitle', 'episode', 'absolute', 'date', 'title', 'ext'\n"+
+			"'series', 'seriesId', 'season', 'seasonName', 'episode', 'absolute', 'date', 'episodeName', 'ext'\n"+
 			"and named variables in filename pattern matched,\n"+
 			"you can use {variable.n} for number padding.\n")
 	rootCmd.Flags().StringP("moveToDir", "m", "",
 		"move to destination directory,\n"+
 			"a format string can be used in the path, for example:\n"+
-			"new_path/S{season.2}-{seasonTitle}")
+			"new_path/S{season.2}-{seasonName}")
 	rootCmd.Flags().String("replaceSpace", "", "replace the whitespace with this value in new filename")
 	rootCmd.Flags().StringP("log", "l", "rename", "the rename log name for recovery")
 	rootCmd.Flags().BoolP("regexpOnly", "R", false,
@@ -183,6 +183,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 
 	recursive := viper.GetBool("recursive")
 	format := viper.GetString("format")
+	moveToDir := viper.GetString("moveToDir")
 	renameSubtitle := viper.GetBool("renameSubtitle")
 	replaceSpaceWith := viper.GetString("replaceSpace")
 	dryRun := viper.GetBool("dryRun")
@@ -209,33 +210,37 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 		}
 		for _, ef := range episodeFiles {
 			renames := ef.Renames(format, replaceSpaceWith, renameSubtitle)
-			if dryRun {
-				for o, n := range renames {
-					fmt.Printf("%s will be rename to %s\n", o, n)
+			for o, n := range renames {
+				src := path.Join(ef.FileDir, o)
+				var dstDir string
+				if moveToDir != "" {
+					dstDir = utils.NamedFormat(moveToDir, ef.Infos)
+				} else {
+					dstDir = ef.FileDir
 				}
-			} else {
-				for o, n := range renames {
-					src := path.Join(ef.FileDir, o)
-					dst := path.Join(ef.FileDir, n)
-					if _, err := os.Stat(dst); err == nil {
-						fmt.Printf("[E] %s exists, skipping rename %s\n", dst, src)
-						continue
+				dst := path.Join(dstDir, n)
+				if _, err := os.Stat(dst); err == nil {
+					fmt.Printf("[E] %s exists, skipping rename %s\n", dst, src)
+					continue
+				}
+				if dryRun {
+					fmt.Printf("%s will rename(move) to %s\n", src, dst)
+					continue
+				}
+				if err := os.Rename(src, dst); err == nil {
+					fmt.Printf("%s has rename(move) to %s\n", src, dst)
+					rel_src, err := filepath.Rel(fp, src)
+					if err != nil {
+						fmt.Printf("[E] %s\n", err)
 					}
-					if err := os.Rename(src, dst); err == nil {
-						fmt.Printf("%s has rename to %s\n", o, n)
-						rel_src, err := filepath.Rel(fp, src)
-						if err != nil {
-							fmt.Printf("[E] %s\n", err)
-						}
-						rel_dst, err := filepath.Rel(fp, dst)
-						if err != nil {
-							fmt.Printf("[E] %s\n", err)
-						}
-						logFile.WriteString(fmt.Sprintf("R: '%s' -> '%s'\n", rel_src, rel_dst))
-						logFile.Sync()
-					} else {
-						fmt.Printf("rename %s to %s error: %v\n", o, n, err)
+					rel_dst, err := filepath.Rel(fp, dst)
+					if err != nil {
+						fmt.Printf("[E] %s\n", err)
 					}
+					logFile.WriteString(fmt.Sprintf("R: '%s' -> '%s'\n", rel_src, rel_dst))
+					logFile.Sync()
+				} else {
+					fmt.Printf("rename %s to %s error: %v\n", src, n, err)
 				}
 			}
 		}

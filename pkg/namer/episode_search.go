@@ -165,9 +165,10 @@ func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filesInSameDir
 	}
 	if episode != nil {
 		infos[InfoKeySeason] = episode.SeasonNumber
+		infos[InfoKeySeasonName] = se.SeasonNames[episode.SeasonNumber]
 		infos[InfoKeyEpisode] = episode.EpisodeNumber
 		infos[InfoKeyAbsolute] = episode.AbsoluteNumber
-		infos[InfoKeyTitle] = episode.Name
+		infos[InfoKeyEpisodeName] = episode.Name
 		infos[InfoKeyDate] = episode.AiredDate
 	}
 	mediaFile := EpisodeFile{

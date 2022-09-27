@@ -19,14 +19,15 @@ type EpisodeFile struct {
 }
 
 const (
-	InfoKeySeries   = "series"
-	InfoKeySeriesId = "seriesId"
-	InfoKeySeason   = "season"
-	InfoKeyEpisode  = "episode"
-	InfoKeyAbsolute = "absolute"
-	InfoKeyTitle    = "title"
-	InfoKeyExt      = "ext"
-	InfoKeyDate     = "date"
+	InfoKeySeries      = "series"
+	InfoKeySeriesId    = "seriesId"
+	InfoKeySeason      = "season"
+	InfoKeySeasonName  = "seasonName"
+	InfoKeyEpisode     = "episode"
+	InfoKeyAbsolute    = "absolute"
+	InfoKeyEpisodeName = "episodeName"
+	InfoKeyExt         = "ext"
+	InfoKeyDate        = "date"
 )
 
 var (
