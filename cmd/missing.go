@@ -21,7 +21,6 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/tnextday/animenamer/pkg/namer"
-	"github.com/tnextday/animenamer/pkg/seriesdb"
 	"github.com/tnextday/animenamer/pkg/seriesdb/series"
 	"github.com/tnextday/animenamer/pkg/verbose"
 
@@ -58,22 +57,7 @@ func missingRun(cmd *cobra.Command, args []string) {
 		fmt.Printf("name or seriesId must be defined\n")
 		os.Exit(1)
 	}
-	db := viper.GetString("db")
-	apiKey := viper.GetString("apikey")
-	if apiKey == "" {
-		switch db {
-		case series.ProviderTMDB:
-			apiKey = DefaultTMDBApiKey
-		case series.ProviderTVDB:
-			apiKey = DefaultTVDBApiKey
-		}
-	}
-
-	sdb, err := seriesdb.NewSeriesDB(db, apiKey, viper.GetString("language"), loadCustomConfig())
-	if err != nil {
-		fmt.Printf("new seriesdb error: %v\n", err)
-		os.Exit(1)
-	}
+	sdb := createSeriesDB()
 
 	es := namer.EpisodeSearch{
 		SeriesDB:     sdb,
@@ -83,6 +67,7 @@ func missingRun(cmd *cobra.Command, args []string) {
 		SeriesId:     viper.GetString("seriesId"),
 	}
 	if es.SeriesId == "" {
+		var err error
 		es.SeriesId, err = sdb.Search(es.SeriesName)
 		if err != nil {
 			fmt.Printf("can't search series, error: %v\n", err)

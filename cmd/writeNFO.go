@@ -18,13 +18,12 @@ package cmd
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 
-	"github.com/tnextday/animenamer/pkg/seriesdb"
 	"github.com/tnextday/animenamer/pkg/seriesdb/series"
 
 	"github.com/spf13/viper"
@@ -68,22 +67,8 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 		fmt.Printf("name or seriesId must be defined\n")
 		os.Exit(1)
 	}
-	db := viper.GetString("db")
-	apiKey := viper.GetString("apikey")
-	if apiKey == "" {
-		switch db {
-		case series.ProviderTMDB:
-			apiKey = DefaultTMDBApiKey
-		case series.ProviderTVDB:
-			apiKey = DefaultTVDBApiKey
-		}
-	}
 
-	sdb, err := seriesdb.NewSeriesDB(db, apiKey, viper.GetString("language"), loadCustomConfig())
-	if err != nil {
-		fmt.Printf("new seriesdb error: %v\n", err)
-		os.Exit(1)
-	}
+	sdb := createSeriesDB()
 	es := namer.EpisodeSearch{
 		SeriesDB:     sdb,
 		MediaExt:     namer.NewFileExtFromString(viper.GetString("mediaExt"), ","),
@@ -92,6 +77,7 @@ func writeNFORun(cmd *cobra.Command, args []string) {
 		SeriesId:     viper.GetString("seriesId"),
 	}
 	fmt.Printf("get series details")
+	var err error
 	if es.SeriesId == "" {
 		es.SeriesId, err = sdb.Search(es.SeriesName)
 		if err != nil {
@@ -179,11 +165,11 @@ func downloadToFile(url, fp string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(fp, buf, 0644)
+	return os.WriteFile(fp, buf, 0644)
 }
 
 func writeNFOFile(v interface{}, fp string) error {
@@ -192,7 +178,7 @@ func writeNFOFile(v interface{}, fp string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(fp, buf, 0644)
+	return os.WriteFile(fp, buf, 0644)
 }
 
 func writeEpisodeNFO(epf *namer.EpisodeFile, overrideImage bool) (err error) {

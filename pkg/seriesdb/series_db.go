@@ -1,12 +1,9 @@
 package seriesdb
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/tnextday/animenamer/pkg/seriesdb/series"
-	"github.com/tnextday/animenamer/pkg/seriesdb/tmdb"
-	"github.com/tnextday/animenamer/pkg/seriesdb/tvdb"
 )
 
 type SeriesDB struct {
@@ -17,22 +14,7 @@ type SeriesDB struct {
 	Custom      map[string]*series.CustomSeries
 }
 
-func NewSeriesDB(db, apiKey, language string, customs ...*series.CustomSeries) (*SeriesDB, error) {
-	var (
-		provider series.Provider
-		err      error
-	)
-	switch db {
-	case series.ProviderTVDB:
-		provider, err = tvdb.NewTVDB(apiKey)
-	case series.ProviderTMDB:
-		provider, err = tmdb.NewTMDB(apiKey)
-	default:
-		err = fmt.Errorf("unknow provider type (%s)", db)
-	}
-	if err != nil {
-		return nil, err
-	}
+func NewSeriesDB(provider series.Provider, language string, customs ...*series.CustomSeries) (*SeriesDB, error) {
 	sdb := SeriesDB{
 		provider:    provider,
 		Language:    language,

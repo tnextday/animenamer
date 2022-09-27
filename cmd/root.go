@@ -28,6 +28,8 @@ import (
 	"github.com/tnextday/animenamer/pkg/namer"
 	"github.com/tnextday/animenamer/pkg/seriesdb"
 	"github.com/tnextday/animenamer/pkg/seriesdb/series"
+	"github.com/tnextday/animenamer/pkg/seriesdb/tmdb"
+	"github.com/tnextday/animenamer/pkg/seriesdb/tvdb"
 	"github.com/tnextday/animenamer/pkg/utils"
 	"github.com/tnextday/animenamer/pkg/verbose"
 
@@ -67,6 +69,7 @@ func init() {
 	rootCmd.PersistentFlags().String("db", "tmdb", "tmdb or tvdb")
 	rootCmd.PersistentFlags().String("apikey", "", "the apikey of tmdb or tvdb")
 	rootCmd.PersistentFlags().String("id", "", "explicitly set the show id for db to use (applies to all files)")
+	rootCmd.PersistentFlags().String("tmdb.absoluteGroupName", "Absolute Order", "when there are multiple tmdb absolute groups, use this name to match")
 	rootCmd.PersistentFlags().StringP("name", "n", "", "override the parsed series name with this (applies to all files)")
 	rootCmd.PersistentFlags().String("mediaExt", "mkv,mp4,avi,rm,rmvb,mov,m4v,wmv", "media file extensions")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show debugging info")
@@ -133,6 +136,41 @@ func initConfig() {
 	verbose.V = viper.GetBool("verbose")
 }
 
+func defaultString(s, d string) string {
+	if s == "" {
+		return d
+	} else {
+		return s
+	}
+}
+
+func createSeriesDB() *seriesdb.SeriesDB {
+	db := viper.GetString("db")
+	var (
+		provider series.Provider
+		err      error
+	)
+	switch db {
+	case series.ProviderTMDB:
+		provider, err = tmdb.NewTMDB(defaultString(viper.GetString("apikey"), DefaultTMDBApiKey), viper.GetString("tmdb.absoluteGroupName"))
+	case series.ProviderTVDB:
+		provider, err = tvdb.NewTVDB(defaultString(viper.GetString("apikey"), DefaultTVDBApiKey))
+	default:
+		fmt.Printf("[E] unknown db type %s\n", db)
+		os.Exit(1)
+	}
+	if err != nil {
+		fmt.Printf("[E] new provider: %v\n", err)
+		os.Exit(1)
+	}
+	sdb, err := seriesdb.NewSeriesDB(provider, viper.GetString("language"), loadCustomConfig())
+	if err != nil {
+		fmt.Printf("[E] new seriesdb error: %v\n", err)
+		os.Exit(1)
+	}
+	return sdb
+}
+
 func rootCmdFunc(cmd *cobra.Command, args []string) {
 	if viper.GetBool("verbose") {
 		for k, v := range viper.AllSettings() {
@@ -142,26 +180,10 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 	regexpOnly := viper.GetBool("regexpOnly")
 	var (
 		sdb *seriesdb.SeriesDB
-		err error
 	)
 
 	if !regexpOnly {
-		db := viper.GetString("db")
-		apiKey := viper.GetString("apikey")
-		if apiKey == "" {
-			switch db {
-			case series.ProviderTMDB:
-				apiKey = DefaultTMDBApiKey
-			case series.ProviderTVDB:
-				apiKey = DefaultTVDBApiKey
-			}
-		}
-
-		sdb, err = seriesdb.NewSeriesDB(db, apiKey, viper.GetString("language"), loadCustomConfig())
-		if err != nil {
-			fmt.Printf("[E] new seriesdb error: %v\n", err)
-			os.Exit(1)
-		}
+		sdb = createSeriesDB()
 	}
 
 	es := namer.EpisodeSearch{
@@ -173,7 +195,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 		RegexpOnly:   regexpOnly,
 	}
 	for _, p := range viper.GetStringSlice("pattern") {
-		if err = es.AddPattern(p); err != nil {
+		if err := es.AddPattern(p); err != nil {
 			fmt.Printf("[E] parse pattern (%s) %v\n", p, err)
 		}
 	}
