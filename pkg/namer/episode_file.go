@@ -5,9 +5,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tnextday/animenamer/pkg/seriesdb/series"
 	"github.com/tnextday/animenamer/pkg/utils"
-
-	"github.com/tnextday/animenamer/pkg/tvdbex"
 )
 
 type EpisodeFile struct {
@@ -15,8 +14,8 @@ type EpisodeFile struct {
 	Filename  string
 	Infos     Infos
 	Subtitles []string
-	Series    *tvdbex.SeriesEx
-	Episode   *tvdbex.EpisodeEx
+	Series    *series.Series
+	Episode   *series.Episode
 }
 
 const (

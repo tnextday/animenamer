@@ -15,7 +15,7 @@ pattern:
 recursive: true
 renamesubtitle: true
 replacespace: ""
-seriesid: 79895
+id: "79895"
 subtitleext: ass,ssa,srt,sub
 verbose: false
 writenfo:

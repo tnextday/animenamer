@@ -7,12 +7,14 @@ GIT_TAG = `git describe --tags`
 GOOS = `go env GOHOSTOS`
 GOARCH = `go env GOHOSTARCH`
 TVDB_APIKEY = Z5SC1ZD07NNS8TDC
+TMDB_APIKEY = 4219e299c89411838049ab0dab19ebd5
 
 GO_FLAGS = #-v -race
 GO_LDFLAGS = -ldflags "\
  -X github.com/tnextday/animenamer/cmd.AppVersion=$(GIT_TAG)\
  -X github.com/tnextday/animenamer/cmd.BuildTime=`date '+%Y-%m-%d_%H:%M:%S'`\
- -X github.com/tnextday/animenamer/cmd.DefaultTvDbApiKey=${TVDB_APIKEY}\
+ -X github.com/tnextday/animenamer/cmd.DefaultTVDBApiKey=${TVDB_APIKEY}\
+ -X github.com/tnextday/animenamer/cmd.DefaultTMDBApiKey=${TMDB_APIKEY}\
 "
 
 SOURCE_DIR = ./

@@ -11,18 +11,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tnextday/animenamer/pkg/seriesdb"
+	"github.com/tnextday/animenamer/pkg/seriesdb/series"
 	"github.com/tnextday/animenamer/pkg/verbose"
-
-	"github.com/tnextday/animenamer/pkg/tvdbex"
 )
 
 type EpisodeSearch struct {
 	Filters      []*regexp.Regexp
 	MediaExt     FileExt
 	SubtitlesExt FileExt
-	TVDB         *tvdbex.TVDBEx
+	SeriesDB     *seriesdb.SeriesDB
 	SeriesName   string
-	SeriesId     int
+	SeriesId     string
 	RegexpOnly   bool
 }
 
@@ -42,7 +42,7 @@ func (es *EpisodeSearch) AddPattern(pattern string) error {
 	}
 	if !es.RegexpOnly {
 		names := re.SubexpNames()
-		if es.SeriesName == "" && es.SeriesId == 0 {
+		if es.SeriesName == "" && es.SeriesId == "" {
 			if !(contains(names, InfoKeySeries) || contains(names, InfoKeySeriesId)) {
 				return errors.New("series or seriesId must be defined")
 			}
@@ -133,49 +133,49 @@ func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filesInSameDir
 	if es.SeriesName != "" {
 		infos[InfoKeySeries] = es.SeriesName
 	}
-	if es.SeriesId != 0 {
+	if es.SeriesId != "" {
 		infos[InfoKeySeriesId] = es.SeriesId
 	}
 	var (
-		series  *tvdbex.SeriesEx
-		episode *tvdbex.EpisodeEx
+		se      *series.Series
+		episode *series.Episode
 	)
-	if !es.RegexpOnly && es.TVDB != nil {
-		seriesId := infos.GetInt(InfoKeySeriesId)
-		if seriesId == 0 {
-			seriesId, err = es.TVDB.Search(infos.GetString(InfoKeySeries))
+	if !es.RegexpOnly && es.SeriesDB != nil {
+		seriesId := infos.GetString(InfoKeySeriesId)
+		if seriesId == "" {
+			seriesId, err = es.SeriesDB.Search(infos.GetString(InfoKeySeries))
 			if err != nil {
 				verbose.Printf("search series (%s) error: %v\n", infos.GetString(InfoKeySeries), err)
 			}
 		}
-		if seriesId != 0 {
-			series, err = es.TVDB.GetSeriesEx(seriesId)
+		if seriesId != "" {
+			se, err = es.SeriesDB.GetSeries(seriesId)
 			if err != nil {
 				verbose.Printf("get series (%d) error: %v\n", seriesId, err)
 			}
 		}
 	}
-	if series != nil {
-		infos[InfoKeySeries] = series.SeriesName
-		infos[InfoKeySeriesId] = series.ID
-		episode = series.GetEpisodeBySeasonEpisodeNumber(infos.GetInt(InfoKeySeason), infos.GetInt(InfoKeyEpisode))
+	if se != nil {
+		infos[InfoKeySeries] = se.Name
+		infos[InfoKeySeriesId] = se.SeriesID
+		episode = se.GetEpisodeBySeasonEpisodeNumber(infos.GetInt(InfoKeySeason), infos.GetInt(InfoKeyEpisode))
 		if episode == nil {
-			episode = series.GetEpisodeByAbsoluteNumber(infos.GetInt(InfoKeyAbsolute))
+			episode = se.GetEpisodeByAbsoluteNumber(infos.GetInt(InfoKeyAbsolute))
 		}
 	}
 	if episode != nil {
-		infos[InfoKeySeason] = episode.AiredSeason
-		infos[InfoKeyEpisode] = episode.AiredEpisodeNumber
+		infos[InfoKeySeason] = episode.SeasonNumber
+		infos[InfoKeyEpisode] = episode.EpisodeNumber
 		infos[InfoKeyAbsolute] = episode.AbsoluteNumber
-		infos[InfoKeyTitle] = episode.EpisodeName
-		infos[InfoKeyDate] = episode.FirstAired
+		infos[InfoKeyTitle] = episode.Name
+		infos[InfoKeyDate] = episode.AiredDate
 	}
 	mediaFile := EpisodeFile{
 		FileDir:   dirname,
 		Filename:  filename,
 		Infos:     infos,
 		Subtitles: searchSubtitles(filename, filesInSameDir, es.SubtitlesExt),
-		Series:    series,
+		Series:    se,
 		Episode:   episode,
 	}
 	return &mediaFile, nil

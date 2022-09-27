@@ -26,7 +26,8 @@ import (
 	"github.com/cloudfoundry/jibber_jabber"
 	"github.com/spf13/cobra"
 	"github.com/tnextday/animenamer/pkg/namer"
-	"github.com/tnextday/animenamer/pkg/tvdbex"
+	"github.com/tnextday/animenamer/pkg/seriesdb"
+	"github.com/tnextday/animenamer/pkg/seriesdb/series"
 	"github.com/tnextday/animenamer/pkg/utils"
 	"github.com/tnextday/animenamer/pkg/verbose"
 
@@ -35,7 +36,8 @@ import (
 
 var (
 	cfgFile           string
-	DefaultTvDbApiKey string
+	DefaultTVDBApiKey string
+	DefaultTMDBApiKey string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -62,8 +64,9 @@ func init() {
 		"custom series info file.\n"+
 			"its support yaml or json.\n"+
 			"(default is animenamer.custom.yml)")
-	rootCmd.PersistentFlags().String("apikey", "", "the tvdb apikey")
-	rootCmd.PersistentFlags().String("seriesId", "", "explicitly set the show id for TVdb to use (applies to all files)")
+	rootCmd.PersistentFlags().String("db", "tmdb", "provider db")
+	rootCmd.PersistentFlags().String("apikey", "", "the apikey of tmdb or tvdb")
+	rootCmd.PersistentFlags().String("id", "", "explicitly set the show id for db to use (applies to all files)")
 	rootCmd.PersistentFlags().StringP("name", "n", "", "override the parsed series name with this (applies to all files)")
 	rootCmd.PersistentFlags().String("mediaExt", "mkv,mp4,avi,rm,rmvb,mov,m4v,wmv", "media file extensions")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show debugging info")
@@ -78,9 +81,13 @@ func init() {
 	//rootCmd.MarkFlagRequired("pattern")
 	rootCmd.Flags().String("format", "{series}.S{season.2}E{episode.2}.[{absolute.3}].{ext}",
 		"new filename format. variables:\n"+
-			"'series', 'seriesId', 'season', 'episode', 'absolute', 'date', 'title', 'ext'\n"+
+			"'series', 'seriesId', 'season', 'seasonTitle', 'episode', 'absolute', 'date', 'title', 'ext'\n"+
 			"and named variables in filename pattern matched,\n"+
 			"you can use {variable.n} for number padding.\n")
+	rootCmd.Flags().StringP("moveToDir", "m", "",
+		"move to destination directory,\n"+
+			"a format string can be used in the path, for example:\n"+
+			"new_path/S{season.2}-{seasonTitle}")
 	rootCmd.Flags().String("replaceSpace", "", "replace the whitespace with this value in new filename")
 	rootCmd.Flags().StringP("log", "l", "rename", "the rename log name for recovery")
 	rootCmd.Flags().BoolP("regexpOnly", "R", false,
@@ -133,19 +140,25 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 	}
 	regexpOnly := viper.GetBool("regexpOnly")
 	var (
-		tvdb *tvdbex.TVDBEx
-		err  error
+		sdb *seriesdb.SeriesDB
+		err error
 	)
 
 	if !regexpOnly {
+		db := viper.GetString("db")
 		apiKey := viper.GetString("apikey")
 		if apiKey == "" {
-			apiKey = DefaultTvDbApiKey
+			switch db {
+			case series.ProviderTMDB:
+				apiKey = DefaultTMDBApiKey
+			case series.ProviderTVDB:
+				apiKey = DefaultTVDBApiKey
+			}
 		}
 
-		tvdb, err = tvdbex.NewTVDBEx(apiKey, viper.GetString("language"), loadCustomConfig())
+		sdb, err = seriesdb.NewSeriesDB(db, apiKey, viper.GetString("language"), loadCustomConfig())
 		if err != nil {
-			fmt.Printf("[E] new tvdb error: %v\n", err)
+			fmt.Printf("[E] new seriesdb error: %v\n", err)
 			os.Exit(1)
 		}
 	}
@@ -153,9 +166,9 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 	es := namer.EpisodeSearch{
 		MediaExt:     namer.NewFileExtFromString(viper.GetString("mediaExt"), ","),
 		SubtitlesExt: namer.NewFileExtFromString(viper.GetString("subtitleExt"), ","),
-		TVDB:         tvdb,
+		SeriesDB:     sdb,
 		SeriesName:   viper.GetString("name"),
-		SeriesId:     viper.GetInt("seriesId"),
+		SeriesId:     viper.GetString("seriesId"),
 		RegexpOnly:   regexpOnly,
 	}
 	for _, p := range viper.GetStringSlice("pattern") {
@@ -229,12 +242,12 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 	}
 }
 
-func loadCustomConfig() *tvdbex.CustomSeries {
+func loadCustomConfig() *series.CustomSeries {
 	fp := viper.GetString("custom")
 	if fp == "" {
 		return nil
 	}
-	c, e := tvdbex.LoadCustomSeries(fp)
+	c, e := series.LoadCustomSeries(fp)
 	if e == nil {
 		fmt.Printf("[I] use custom series info in %s\n", fp)
 		return c

@@ -1,9 +1,9 @@
-package tvdbex
+package series
 
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/tnextday/animenamer/pkg/kodi"
@@ -11,11 +11,11 @@ import (
 )
 
 type CustomSeries struct {
-	SeriesID    string              `json:"seriesId" yaml:"seriesId"`
-	SeriesName  string              `json:"seriesName" yaml:"seriesName"`
-	Overview    string              `json:"overview" yaml:"overview"`
-	NamedSeason []*kodi.NamedSeason `json:"namedSeason" yaml:"namedSeason"`
-	Episodes    []*CustomEpisode    `json:"episodes" yaml:"episodes"`
+	SeriesID     string              `json:"seriesId" yaml:"seriesId"`
+	SeriesName   string              `json:"seriesName" yaml:"seriesName"`
+	Overview     string              `json:"overview" yaml:"overview"`
+	NamedSeasons []*kodi.NamedSeason `json:"namedSeason" yaml:"namedSeason"`
+	Episodes     []*CustomEpisode    `json:"episodes" yaml:"episodes"`
 }
 
 type CustomEpisode struct {
@@ -27,7 +27,7 @@ type CustomEpisode struct {
 }
 
 func LoadCustomSeries(fp string) (*CustomSeries, error) {
-	buf, err := ioutil.ReadFile(fp)
+	buf, err := os.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

@@ -18,11 +18,11 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/viper"
 	"github.com/tnextday/animenamer/pkg/namer"
-	"github.com/tnextday/animenamer/pkg/tvdbex"
+	"github.com/tnextday/animenamer/pkg/seriesdb"
+	"github.com/tnextday/animenamer/pkg/seriesdb/series"
 	"github.com/tnextday/animenamer/pkg/verbose"
 
 	"github.com/spf13/cobra"
@@ -54,35 +54,42 @@ func missingRun(cmd *cobra.Command, args []string) {
 			verbose.Printf("[V] %s: %v\n", k, v)
 		}
 	}
-	if viper.GetInt("seriesId") == 0 && viper.GetString("name") == "" {
+	if viper.GetString("seriesId") == "" && viper.GetString("name") == "" {
 		fmt.Printf("name or seriesId must be defined\n")
 		os.Exit(1)
 	}
+	db := viper.GetString("db")
 	apiKey := viper.GetString("apikey")
 	if apiKey == "" {
-		apiKey = DefaultTvDbApiKey
+		switch db {
+		case series.ProviderTMDB:
+			apiKey = DefaultTMDBApiKey
+		case series.ProviderTVDB:
+			apiKey = DefaultTVDBApiKey
+		}
 	}
-	tvdb, err := tvdbex.NewTVDBEx(apiKey, viper.GetString("language"))
+
+	sdb, err := seriesdb.NewSeriesDB(db, apiKey, viper.GetString("language"), loadCustomConfig())
 	if err != nil {
-		fmt.Printf("new tvdb error: %v\n", err)
+		fmt.Printf("new seriesdb error: %v\n", err)
 		os.Exit(1)
 	}
 
 	es := namer.EpisodeSearch{
+		SeriesDB:     sdb,
 		MediaExt:     namer.NewFileExtFromString(viper.GetString("mediaExt"), ","),
 		SubtitlesExt: namer.NewFileExtFromString(viper.GetString("subtitleExt"), ","),
-		TVDB:         tvdb,
 		SeriesName:   viper.GetString("name"),
-		SeriesId:     viper.GetInt("seriesId"),
+		SeriesId:     viper.GetString("seriesId"),
 	}
-	if es.SeriesId == 0 {
-		es.SeriesId, err = tvdb.Search(es.SeriesName)
+	if es.SeriesId == "" {
+		es.SeriesId, err = sdb.Search(es.SeriesName)
 		if err != nil {
 			fmt.Printf("can't search series, error: %v\n", err)
 			os.Exit(1)
 		}
 	}
-	series, err := tvdb.GetSeriesEx(es.SeriesId)
+	s, err := sdb.GetSeries(es.SeriesId)
 	if err != nil {
 		fmt.Printf("can't get series from tvdb, error: %v\n", err)
 		os.Exit(1)
@@ -108,21 +115,21 @@ func missingRun(cmd *cobra.Command, args []string) {
 		}
 		fmt.Printf("found %d episode files\n", len(episodeFiles))
 		for _, ef := range episodeFiles {
-			seId := tvdbex.SeasonEpisodeNumberIndex(ef.Episode.AiredSeason, ef.Episode.AiredEpisodeNumber)
+			seId := series.SeasonEpisodeNumberIndex(ef.Episode.SeasonNumber, ef.Episode.EpisodeNumber)
 			episodeFileIndex[seId] = ef
 		}
 	}
-	fmt.Printf("\nSeries: %s\n", series.SeriesName)
-	fmt.Printf("SeriesId: %d\n", series.ID)
-	if len(series.Aliases) > 0 {
-		fmt.Printf("Aliases: %s\n", strings.Join(series.Aliases, ", "))
-	}
+	fmt.Printf("\nSeries: %s\n", s.Name)
+	fmt.Printf("SeriesId: %s\n", s.SeriesID)
+	// if len(series.Aliases) > 0 {
+	// 	fmt.Printf("Aliases: %s\n", strings.Join(series.Aliases, ", "))
+	// }
 	fmt.Println("")
-	for _, ep := range series.Episodes {
-		seId := tvdbex.SeasonEpisodeNumberIndex(ep.AiredSeason, ep.AiredEpisodeNumber)
+	for _, ep := range s.Episodes {
+		seId := series.SeasonEpisodeNumberIndex(ep.SeasonNumber, ep.EpisodeNumber)
 		if _, exists := episodeFileIndex[seId]; !exists {
-			s := fmt.Sprintf("missing s%.2de%.2d", ep.AiredSeason, ep.AiredEpisodeNumber)
-			if ep.AiredSeason != 0 {
+			s := fmt.Sprintf("missing s%.2de%.2d", ep.SeasonNumber, ep.EpisodeNumber)
+			if ep.SeasonNumber != 0 {
 				s += fmt.Sprintf(", absolute %.3d", ep.AbsoluteNumber)
 			}
 			fmt.Println(s)
