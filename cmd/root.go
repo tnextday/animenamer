@@ -64,7 +64,7 @@ func init() {
 		"custom series info file.\n"+
 			"its support yaml or json.\n"+
 			"(default is animenamer.custom.yml)")
-	rootCmd.PersistentFlags().String("db", "tmdb", "provider db")
+	rootCmd.PersistentFlags().String("db", "tmdb", "tmdb or tvdb")
 	rootCmd.PersistentFlags().String("apikey", "", "the apikey of tmdb or tvdb")
 	rootCmd.PersistentFlags().String("id", "", "explicitly set the show id for db to use (applies to all files)")
 	rootCmd.PersistentFlags().StringP("name", "n", "", "override the parsed series name with this (applies to all files)")

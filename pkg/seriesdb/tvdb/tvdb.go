@@ -18,9 +18,7 @@ const (
 )
 
 type TVDB struct {
-	Client   go_tvdb.Client
-	Language string
-	Custom   map[string]*series.CustomSeries
+	Client go_tvdb.Client
 }
 
 // type SeriesEx struct {
@@ -29,16 +27,9 @@ type TVDB struct {
 // 	NamedSeasons       []*kodi.NamedSeason
 // }
 
-func NewTVDB(apiKey string, language string, customs ...*series.CustomSeries) (*TVDB, error) {
+func NewTVDB(apiKey string) (*TVDB, error) {
 	anime := TVDB{
-		Client:   go_tvdb.Client{Apikey: apiKey},
-		Language: language,
-		Custom:   make(map[string]*series.CustomSeries),
-	}
-	for _, c := range customs {
-		if c != nil {
-			anime.Custom[c.SeriesID] = c
-		}
+		Client: go_tvdb.Client{Apikey: apiKey},
 	}
 
 	if err := anime.Client.Login(); err != nil {
@@ -49,8 +40,8 @@ func NewTVDB(apiKey string, language string, customs ...*series.CustomSeries) (*
 
 func (db *TVDB) Search(q, language string) (id string, err error) {
 	var searchLanguages []string
-	if db.Language != "" && db.Language != "en" {
-		searchLanguages = append(searchLanguages, db.Language)
+	if language != "" && language != "en" {
+		searchLanguages = append(searchLanguages, language)
 	}
 	searchLanguages = append(searchLanguages, "")
 	for _, lang := range searchLanguages {
@@ -75,7 +66,7 @@ func (db *TVDB) GetSeries(seriesId, lang string) (*series.SeriesDetail, error) {
 	s := go_tvdb.Series{
 		ID: id,
 	}
-	db.Language = lang
+	db.Client.Language = lang
 	if err := db.Client.GetSeries(&s); err != nil {
 		return nil, err
 	}
@@ -112,12 +103,12 @@ func (db *TVDB) GetSeries(seriesId, lang string) (*series.SeriesDetail, error) {
 	return sd, nil
 }
 
-func (db *TVDB) GetSeriesActors(s *go_tvdb.Series) (err error) {
+func (db *TVDB) GetSeriesActors(s *go_tvdb.Series, language string) (err error) {
 
 	if len(s.Actors) > 0 {
 		return nil
 	}
-	db.Client.Language = db.Language
+	db.Client.Language = language
 	err = db.Client.GetSeriesActors(s)
 	if err != nil && !go_tvdb.HaveCodeError(404, err) {
 		return err
@@ -125,8 +116,8 @@ func (db *TVDB) GetSeriesActors(s *go_tvdb.Series) (err error) {
 	return nil
 }
 
-func (db *TVDB) GetSeriesSummary(s *go_tvdb.Series) (err error) {
-	db.Client.Language = db.Language
+func (db *TVDB) GetSeriesSummary(s *go_tvdb.Series, language string) (err error) {
+	db.Client.Language = language
 	err = db.Client.GetSeriesSummary(s)
 	if err != nil && !go_tvdb.HaveCodeError(404, err) {
 		return err
@@ -134,11 +125,11 @@ func (db *TVDB) GetSeriesSummary(s *go_tvdb.Series) (err error) {
 	return nil
 }
 
-func (db *TVDB) GetSeriesImages(s *go_tvdb.Series) (err error) {
+func (db *TVDB) GetSeriesImages(s *go_tvdb.Series, language string) (err error) {
 	if len(s.Images) > 0 {
 		return nil
 	}
-	db.Client.Language = db.Language
+	db.Client.Language = language
 
 	tmp := go_tvdb.Series{
 		ID: s.ID,

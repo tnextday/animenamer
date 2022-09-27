@@ -23,8 +23,8 @@ func NewSeriesDB(db, apiKey, language string, customs ...*series.CustomSeries) (
 		err      error
 	)
 	switch db {
-	case series.ProviderTMDB:
-		provider, err = tvdb.NewTVDB(apiKey, language, customs...)
+	case series.ProviderTVDB:
+		provider, err = tvdb.NewTVDB(apiKey)
 	case series.ProviderTMDB:
 		provider, err = tmdb.NewTMDB(apiKey)
 	default:
