@@ -87,7 +87,8 @@ func init() {
 	rootCmd.Flags().StringP("moveToDir", "m", "",
 		"move to destination directory,\n"+
 			"a format string can be used in the path, for example:\n"+
-			"new_path/S{season.2}-{seasonName}")
+			"new_path/S{season.2}-{seasonName}\n"+
+			"Note that relative paths are relative to the input folder")
 	rootCmd.Flags().String("replaceSpace", "", "replace the whitespace with this value in new filename")
 	rootCmd.Flags().StringP("log", "l", "rename", "the rename log name for recovery")
 	rootCmd.Flags().BoolP("regexpOnly", "R", false,
@@ -215,6 +216,9 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 				var dstDir string
 				if moveToDir != "" {
 					dstDir = utils.NamedFormat(moveToDir, ef.Infos)
+					if !filepath.IsAbs(dstDir) {
+						dstDir = filepath.Join(fp, dstDir)
+					}
 				} else {
 					dstDir = ef.FileDir
 				}
@@ -227,7 +231,11 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 					fmt.Printf("%s will rename(move) to %s\n", src, dst)
 					continue
 				}
-				if err := os.Rename(src, dst); err == nil {
+				if err := os.MkdirAll(dstDir, 0755); err != nil {
+					fmt.Printf("[E] mkdir %s error: %v\n", dstDir, err)
+					continue
+				}
+				if err = os.Rename(src, dst); err == nil {
 					fmt.Printf("%s has rename(move) to %s\n", src, dst)
 					rel_src, err := filepath.Rel(fp, src)
 					if err != nil {
@@ -240,7 +248,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 					logFile.WriteString(fmt.Sprintf("R: '%s' -> '%s'\n", rel_src, rel_dst))
 					logFile.Sync()
 				} else {
-					fmt.Printf("rename %s to %s error: %v\n", src, n, err)
+					fmt.Printf("[E] rename %s to %s error: %v\n", src, n, err)
 				}
 			}
 		}
