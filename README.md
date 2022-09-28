@@ -1,19 +1,23 @@
 # animenamer
 
 animenamer 是一个动画（anime）重命名工具，它可以使用`集数`（AbsoluteNumber）或者
-`季集`（season&episode）来从 [thetvdb](thetvdb.com) 上获取信息，来重命名文件，使其文件名对搜刮器更友好。
+`季集`（season&episode）来从 [thetvdb](https://thetvdb.com) 或 [The Movie Database (TMDB)](https://www.themoviedb.org/)上获取信息，来重命名文件，使其文件名对搜刮器更友好。
 
 ## 主要特性
 
 * 可以使用`集数`或`季集`来索引信息
+* 可以使用 [TVDB](https://thetvdb.com) 或者 [TMDB](https://www.themoviedb.org/) 来索引信息
 * 使用正则表达式匹配文件
 * 可定制文件名
 * 重命名字幕文件
+* 文件整理
 * 显示缺失的剧集
 * 单文件无依赖，下载即可运行
 * 自定义剧集信息翻译
-* 生成 kodi nfo 文件
-* 下载剧集图片
+* ~~生成 kodi nfo 文件~~
+* ~~下载剧集图片~~
+
+_v0.4 版本以后去掉了生成 kodi nfo 和下载图片的功能_
 
 ## 安装
 
@@ -69,7 +73,7 @@ animenamer [flags] <anime-files>
 
 *正则表达式使用的是 re2 语法，详细语法请访问 [re2 Syntax](https://github.com/google/re2/wiki/Syntax)*。
 
-*[regular expression tester](https://regoio.herokuapp.com/)*
+**[regular expression tester](https://regoio.herokuapp.com/)**
 
 #### 正则表达式参数
 
