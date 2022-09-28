@@ -14,6 +14,11 @@ type TMDB struct {
 	AbsoluteGroupName string
 }
 
+type tmdbEpisodeContext struct {
+	TVEpisodeDetails *go_tmdb.TVEpisodeDetails
+	TVDetails        *go_tmdb.TVDetails
+}
+
 func NewTMDB(apiKey, absoluteGroupName string) (*TMDB, error) {
 	tmdbClient, err := go_tmdb.Init(apiKey)
 	if err != nil {
@@ -91,22 +96,27 @@ func (t *TMDB) GetSeries(seriesId, language string) (*series.SeriesDetail, error
 	if err != nil {
 		return nil, err
 	}
-
+	if episodeGroupsDetails.GroupCount == 0 {
+		return nil, fmt.Errorf("no episode groups")
+	}
 	sd := &series.SeriesDetail{
 		SeriesID:     seriesId,
 		Name:         tvDetail.Name,
 		Overview:     tvDetail.Overview,
 		OriginalName: tvDetail.OriginalName,
 		SeasonNames:  make(map[int]string),
-		OriginalData: tvDetail,
+		Context:      tvDetail,
 	}
 	for _, s := range tvDetail.Seasons {
 		sd.SeasonNames[s.SeasonNumber] = s.Name
 	}
+
 	episodesGroupIdx := 0
+	// 正篇的order一般为1
 	for i, g := range episodeGroupsDetails.Groups {
 		if g.Order == 1 {
 			episodesGroupIdx = i
+			break
 		}
 	}
 	for _, ep := range episodeGroupsDetails.Groups[episodesGroupIdx].Episodes {
@@ -118,6 +128,9 @@ func (t *TMDB) GetSeries(seriesId, language string) (*series.SeriesDetail, error
 			Overview:       ep.Overview,
 			OriginalName:   ep.Name,
 			AiredDate:      ep.AirDate,
+			Context: &tmdbEpisodeContext{
+				TVDetails: tvDetail,
+			},
 		}
 		sd.Episodes = append(sd.Episodes, sep)
 

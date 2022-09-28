@@ -35,10 +35,11 @@ import (
 
 // writeNFOCmd represents the writeNFO command
 var writeNFOCmd = &cobra.Command{
-	Use:   "writeNFO [flags] <anime-dirs>",
-	Short: "write kodi NFO files",
-	Args:  cobra.MinimumNArgs(1),
-	Run:   writeNFORun,
+	Use:    "writeNFO [flags] <anime-dirs>",
+	Short:  "write kodi NFO files",
+	Args:   cobra.MinimumNArgs(1),
+	Run:    writeNFORun,
+	Hidden: true,
 }
 
 func init() {

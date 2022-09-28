@@ -12,7 +12,7 @@ type Episode struct {
 	Overview       string
 	OriginalName   string
 	AiredDate      string
-	OriginalData   interface{}
+	Context        interface{}
 }
 
 type SeriesDetail struct {
@@ -22,7 +22,7 @@ type SeriesDetail struct {
 	OriginalName string
 	SeasonNames  map[int]string
 	Episodes     []*Episode
-	OriginalData interface{}
+	Context      interface{}
 }
 
 type Series struct {

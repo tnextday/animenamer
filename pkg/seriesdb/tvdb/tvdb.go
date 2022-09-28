@@ -21,6 +21,11 @@ type TVDB struct {
 	Client go_tvdb.Client
 }
 
+type tvdbEpisodeContext struct {
+	series  *go_tvdb.Series
+	episode *go_tvdb.Episode
+}
+
 // type SeriesEx struct {
 // 	go_tvdb.Series
 // 	OriginalSeriesName string
@@ -84,9 +89,9 @@ func (db *TVDB) GetSeries(seriesId, lang string) (*series.SeriesDetail, error) {
 		Overview:     s.Overview,
 		OriginalName: s.SeriesName,
 		SeasonNames:  make(map[int]string),
-		OriginalData: s,
+		Context:      s,
 	}
-	for _, ep := range s.Episodes {
+	for i, ep := range s.Episodes {
 		sep := &series.Episode{
 			SeasonNumber:   ep.AiredSeason,
 			EpisodeNumber:  ep.AiredEpisodeNumber,
@@ -95,7 +100,10 @@ func (db *TVDB) GetSeries(seriesId, lang string) (*series.SeriesDetail, error) {
 			Overview:       ep.Overview,
 			OriginalName:   ep.EpisodeName,
 			AiredDate:      ep.FirstAired,
-			OriginalData:   ep,
+			Context: &tvdbEpisodeContext{
+				&s,
+				&s.Episodes[i],
+			},
 		}
 		sd.Episodes = append(sd.Episodes, sep)
 
