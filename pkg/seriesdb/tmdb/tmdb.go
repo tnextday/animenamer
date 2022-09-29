@@ -3,15 +3,19 @@ package tmdb
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	go_tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/tnextday/animenamer/pkg/seriesdb/series"
 )
 
+var regGroupSeason = regexp.MustCompile(`^([^\(\)]+)?\s*(\((.*)\))?$`)
+
 type TMDB struct {
-	Client            *go_tmdb.Client
-	AbsoluteGroupName string
+	Client              *go_tmdb.Client
+	AbsoluteGroupSeason string
 }
 
 type tmdbEpisodeContext struct {
@@ -19,15 +23,15 @@ type tmdbEpisodeContext struct {
 	TVDetails        *go_tmdb.TVDetails
 }
 
-func NewTMDB(apiKey, absoluteGroupName string) (*TMDB, error) {
+func NewTMDB(apiKey, absoluteGroupSeason string) (*TMDB, error) {
 	tmdbClient, err := go_tmdb.Init(apiKey)
 	if err != nil {
 		return nil, err
 	}
 	tmdbClient.SetClientAutoRetry()
 	return &TMDB{
-		Client:            tmdbClient,
-		AbsoluteGroupName: absoluteGroupName,
+		Client:              tmdbClient,
+		AbsoluteGroupSeason: absoluteGroupSeason,
 	}, nil
 }
 
@@ -55,21 +59,38 @@ type EpisodeGroup struct {
 	ID   string
 }
 
-func (t *TMDB) GetSeries(seriesId, language string) (*series.SeriesDetail, error) {
+func (t *TMDB) GetSeries(seriesId, language string, options map[string]string) (*series.SeriesDetail, error) {
 	id, err := strconv.Atoi(seriesId)
 	if err != nil {
 		return nil, err
 	}
-	options := map[string]string{
+	apiOptions := map[string]string{
 		"language":           language,
 		"append_to_response": "episode_groups",
 	}
-	tvDetail, err := t.Client.GetTVDetails(id, options)
+	tvDetail, err := t.Client.GetTVDetails(id, apiOptions)
 	if err != nil {
 		return nil, err
 	}
 	var absoluteGroups []*EpisodeGroup
 
+	absoluteGroupSeason := t.AbsoluteGroupSeason
+	if v, exists := options["absoluteGroupSeason"]; exists {
+		absoluteGroupSeason = v
+	}
+	var (
+		groupName  string
+		seasonName string
+	)
+	if absoluteGroupSeason != "" {
+		matches := regGroupSeason.FindStringSubmatch(absoluteGroupSeason)
+		if len(matches) == 4 {
+			seasonName = strings.TrimSpace(matches[1])
+			groupName = strings.TrimSpace(matches[3])
+		} else {
+			return nil, fmt.Errorf("absoluteGroupSeason matches unexpected: %v", matches)
+		}
+	}
 	for _, v := range tvDetail.EpisodeGroups.Results {
 		if v.Type == 2 {
 			absoluteGroups = append(absoluteGroups, &EpisodeGroup{
@@ -83,16 +104,17 @@ func (t *TMDB) GetSeries(seriesId, language string) (*series.SeriesDetail, error
 		absoluteGroupId = absoluteGroups[0].ID
 	} else {
 		for i, g := range absoluteGroups {
-			if g.Name == t.AbsoluteGroupName {
+			if strings.TrimSpace(g.Name) == groupName {
 				absoluteGroupId = absoluteGroups[i].ID
+				break
 			}
 		}
 	}
 	if absoluteGroupId == "" {
 		return nil, fmt.Errorf("can't found absolute group")
 	}
-	delete(options, "append_to_response")
-	episodeGroupsDetails, err := t.Client.GetTVEpisodeGroupsDetails(absoluteGroupId, options)
+	delete(apiOptions, "append_to_response")
+	episodeGroupsDetails, err := t.Client.GetTVEpisodeGroupsDetails(absoluteGroupId, apiOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -112,9 +134,14 @@ func (t *TMDB) GetSeries(seriesId, language string) (*series.SeriesDetail, error
 	}
 
 	episodesGroupIdx := 0
-	// 正篇的order一般为1
 	for i, g := range episodeGroupsDetails.Groups {
-		if g.Order == 1 {
+		if seasonName != "" {
+			if strings.TrimSpace(g.Name) == seasonName {
+				episodesGroupIdx = i
+				break
+			}
+		} else if g.Order == 1 {
+			// 正篇的order一般为1
 			episodesGroupIdx = i
 			break
 		}

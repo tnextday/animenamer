@@ -3,6 +3,7 @@ package namer
 import (
 	"container/list"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -151,7 +152,7 @@ func (es *EpisodeSearch) newEpisodeFile(dirname, filename string, filesInSameDir
 		if seriesId != "" {
 			se, err = es.SeriesDB.GetSeries(seriesId)
 			if err != nil {
-				verbose.Printf("get series (%d) error: %v\n", seriesId, err)
+				return nil, fmt.Errorf("get series (%s) error: %v", seriesId, err)
 			}
 		}
 	}

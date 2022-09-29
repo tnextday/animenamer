@@ -1,6 +1,8 @@
 seriesId: 79895
 seriesName: GINTAMA
 overview: 简介
+tmdb:
+  absoluteGroupSeason: "All Episodes (Gintama)"
 namedSeason:
   - number: 1
     name: 第一季
@@ -10,3 +12,10 @@ episodes:
   - absolute: 1
     name: 第一集
     overview: 第一集简介
+
+---
+
+seriesId: 37854
+seriesName: One Piece
+tmdb:
+  absoluteGroupSeason: "Season 1 (Absolute Order)"

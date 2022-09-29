@@ -62,14 +62,16 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is animenamer.yml)")
-	rootCmd.PersistentFlags().String("custom", "animenamer.custom.yml",
+	rootCmd.PersistentFlags().StringSlice("custom", []string{"animenamer.custom.yml"},
 		"custom series info file.\n"+
-			"its support yaml or json.\n"+
 			"(default is animenamer.custom.yml)")
 	rootCmd.PersistentFlags().String("db", "tmdb", "tmdb or tvdb")
 	rootCmd.PersistentFlags().String("apikey", "", "the apikey of tmdb or tvdb")
 	rootCmd.PersistentFlags().String("id", "", "explicitly set the show id for db to use (applies to all files)")
-	rootCmd.PersistentFlags().String("tmdb.absoluteGroupName", "Absolute Order", "when there are multiple tmdb absolute groups, use this name to match")
+	rootCmd.PersistentFlags().String("tmdb.absoluteGroupSeason", "",
+		"when there are multiple tmdb absolute groups, use this name to match,\n"+
+			"this value can find at group episode -> season x page,\n"+
+			"the format is 'season name (group name)'")
 	rootCmd.PersistentFlags().StringP("name", "n", "", "override the parsed series name with this (applies to all files)")
 	rootCmd.PersistentFlags().String("mediaExt", "mkv,mp4,avi,rm,rmvb,mov,m4v,wmv", "media file extensions")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show debugging info")
@@ -152,7 +154,7 @@ func createSeriesDB() *seriesdb.SeriesDB {
 	)
 	switch db {
 	case series.ProviderTMDB:
-		provider, err = tmdb.NewTMDB(defaultString(viper.GetString("apikey"), DefaultTMDBApiKey), viper.GetString("tmdb.absoluteGroupName"))
+		provider, err = tmdb.NewTMDB(defaultString(viper.GetString("apikey"), DefaultTMDBApiKey), viper.GetString("tmdb.absoluteGroupSeason"))
 	case series.ProviderTVDB:
 		provider, err = tvdb.NewTVDB(defaultString(viper.GetString("apikey"), DefaultTVDBApiKey))
 	default:
@@ -163,7 +165,7 @@ func createSeriesDB() *seriesdb.SeriesDB {
 		fmt.Printf("[E] new provider: %v\n", err)
 		os.Exit(1)
 	}
-	sdb, err := seriesdb.NewSeriesDB(provider, viper.GetString("language"), loadCustomConfig())
+	sdb, err := seriesdb.NewSeriesDB(provider, viper.GetString("language"), loadCustomConfigs()...)
 	if err != nil {
 		fmt.Printf("[E] new seriesdb error: %v\n", err)
 		os.Exit(1)
@@ -191,7 +193,7 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 		SubtitlesExt: namer.NewFileExtFromString(viper.GetString("subtitleExt"), ","),
 		SeriesDB:     sdb,
 		SeriesName:   viper.GetString("name"),
-		SeriesId:     viper.GetString("seriesId"),
+		SeriesId:     viper.GetString("id"),
 		RegexpOnly:   regexpOnly,
 	}
 	for _, p := range viper.GetStringSlice("pattern") {
@@ -277,17 +279,20 @@ func rootCmdFunc(cmd *cobra.Command, args []string) {
 	}
 }
 
-func loadCustomConfig() *series.CustomSeries {
-	fp := viper.GetString("custom")
-	if fp == "" {
+func loadCustomConfigs() []*series.CustomSeries {
+	fps := viper.GetStringSlice("custom")
+	if len(fps) == 0 {
 		return nil
 	}
-	c, e := series.LoadCustomSeries(fp)
-	if e == nil {
-		fmt.Printf("[I] use custom series info in %s\n", fp)
-		return c
-	} else {
-		fmt.Printf("[E] load custom series info in %s error, %v\n", fp, e)
-		return nil
+	var customs []*series.CustomSeries
+	for _, fp := range fps {
+		c, e := series.LoadCustomSeries(fp)
+		if e == nil {
+			fmt.Printf("[I] use custom series info in %s\n", fp)
+			customs = append(customs, c...)
+		} else {
+			fmt.Printf("[E] load custom series info in %s error, %v\n", fp, e)
+		}
 	}
+	return customs
 }

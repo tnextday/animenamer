@@ -48,13 +48,16 @@ func (db *SeriesDB) GetSeries(seriesId string) (*series.Series, error) {
 	if series, exists := db.seriesCache[seriesId]; exists {
 		return series, nil
 	}
-	seriesDetail, err := db.provider.GetSeries(seriesId, db.Language)
+	custom := db.Custom[seriesId]
+	var options map[string]string
+	if custom != nil && custom.TMDB.AbsoluteGroupSeason != "" {
+		options = map[string]string{
+			"absoluteGroupSeason": custom.TMDB.AbsoluteGroupSeason,
+		}
+	}
+	seriesDetail, err := db.provider.GetSeries(seriesId, db.Language, options)
 	if err != nil {
 		return nil, err
-	}
-	custom := db.Custom[seriesId]
-	if custom == nil {
-		custom = db.Custom[""]
 	}
 	series := series.NewSeries(seriesDetail, custom)
 	db.seriesCache[seriesId] = series

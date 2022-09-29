@@ -63,7 +63,7 @@ func (db *TVDB) Search(q, language string) (id string, err error) {
 	return "", series.ErrSearchNotFound
 }
 
-func (db *TVDB) GetSeries(seriesId, lang string) (*series.SeriesDetail, error) {
+func (db *TVDB) GetSeries(seriesId, lang string, options map[string]string) (*series.SeriesDetail, error) {
 	id, err := strconv.Atoi(seriesId)
 	if err != nil {
 		return nil, err

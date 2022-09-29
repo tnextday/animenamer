@@ -1,10 +1,9 @@
 package series
 
 import (
-	"encoding/json"
-	"fmt"
+	"bytes"
+	"io"
 	"os"
-	"path"
 
 	"github.com/tnextday/animenamer/pkg/kodi"
 	"gopkg.in/yaml.v3"
@@ -16,6 +15,9 @@ type CustomSeries struct {
 	Overview     string              `json:"overview" yaml:"overview"`
 	NamedSeasons []*kodi.NamedSeason `json:"namedSeason" yaml:"namedSeason"`
 	Episodes     []*CustomEpisode    `json:"episodes" yaml:"episodes"`
+	TMDB         struct {
+		AbsoluteGroupSeason string `json:"absoluteGroupSeason" yaml:"absoluteGroupSeason"`
+	} `json:"tmdb" yaml:"tmdb"`
 }
 
 type CustomEpisode struct {
@@ -26,23 +28,27 @@ type CustomEpisode struct {
 	Overview           string `json:"overview" yaml:"overview"`
 }
 
-func LoadCustomSeries(fp string) (*CustomSeries, error) {
+func LoadCustomSeries(fp string) ([]*CustomSeries, error) {
 	buf, err := os.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}
-	ext := path.Ext(fp)
-	var series CustomSeries
-	switch ext {
-	case ".yml", ".yaml":
-		err = yaml.Unmarshal(buf, &series)
-	case ".json":
-		err = json.Unmarshal(buf, &series)
-	default:
-		err = fmt.Errorf("format %s not support", ext)
+	var customs []*CustomSeries
+	r := bytes.NewReader(buf)
+	decoder := yaml.NewDecoder(r)
+	for {
+		var series CustomSeries
+		if err := decoder.Decode(&series); err != nil {
+			// Break when there are no more documents to decode
+			if err != io.EOF {
+				return nil, err
+			}
+			break
+		}
+		customs = append(customs, &series)
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &series, nil
+	return customs, nil
 }

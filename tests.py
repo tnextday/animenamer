@@ -37,7 +37,7 @@ class MockFiles(unittest.TestCase):
     def check_exists(self, filepath):
         self.assertTrue(Path(self.base_dir.join(filepath)).exists())
     
-_mock_files = [
+_mock_files_tvdb = [
     "1-201/银魂.Gintama.003.mp4",
     "1-201/银魂.Gintama.003.chs.ass",
     "S2/银魂.Gintama.202.mkv", 
@@ -80,7 +80,7 @@ class TestAnimeRenamer(unittest.TestCase):
             "银魂.Gintama.203.ass",
             "One Piece.S02E02.[010].mkv"
         ]
-        mock_fs = MockFiles("anime_ranme", _mock_files)
+        mock_fs = MockFiles("anime_ranme", _mock_files_tvdb)
         options = [
             "--language", "en",
             "--db", "tvdb",
@@ -91,8 +91,8 @@ class TestAnimeRenamer(unittest.TestCase):
         ]
         o = self.run_app(options, mock_fs.base_dir)
         # print(o)
-        for i in range(0, len(_mock_files)):
-            mock_fs.check_rename(_mock_files[i], renamed_files[i])
+        for i in range(0, len(_mock_files_tvdb)):
+            mock_fs.check_rename(_mock_files_tvdb[i], renamed_files[i])
 
     def test_regexp_rename(self):
         renamed_files = [
@@ -103,7 +103,7 @@ class TestAnimeRenamer(unittest.TestCase):
             "银魂.Gintama.203.ass",
             "海贼王.[010].mkv"
         ]
-        mock_fs = MockFiles("regexp_ranme", _mock_files)
+        mock_fs = MockFiles("regexp_ranme", _mock_files_tvdb)
         options = [
             "-R",
             "-p", r"银魂\.(?P<name>.+)\.(?P<absolute>\d+)\.\w+?$",
@@ -112,11 +112,11 @@ class TestAnimeRenamer(unittest.TestCase):
             str(mock_fs.base_dir)
         ]
         o = self.run_app(options, mock_fs.base_dir)
-        for i in range(0, len(_mock_files)):
-            mock_fs.check_rename(_mock_files[i], renamed_files[i])
+        for i in range(0, len(_mock_files_tvdb)):
+            mock_fs.check_rename(_mock_files_tvdb[i], renamed_files[i])
 
     def test_recovery(self):
-        mock_fs = MockFiles("recovery_ranme", _mock_files)
+        mock_fs = MockFiles("recovery_ranme", _mock_files_tvdb)
         rename_options = [
             "-R",
             "-p", r"银魂\.(?P<name>.+)\.(?P<absolute>\d+)\.\w+?$",
@@ -129,7 +129,7 @@ class TestAnimeRenamer(unittest.TestCase):
             "recovery", mock_fs.base_dir.joinpath("rename.1.log")
         ]
         o = self.run_app(recovery_options, mock_fs.base_dir)
-        for f in _mock_files:
+        for f in _mock_files_tvdb:
             mock_fs.check_recovery(f)
 
     def test_move_to_dir(self):
@@ -141,7 +141,7 @@ class TestAnimeRenamer(unittest.TestCase):
             ("银魂.Gintama.203.ass", None),
             ("One Piece.S02E02.[010].mkv", "One Piece-S02"),
         ]
-        mock_fs = MockFiles("anime_ranme", _mock_files)
+        mock_fs = MockFiles("move_to", _mock_files_tvdb)
         options = [
             "--language", "en",
             "--db", "tvdb",
@@ -153,9 +153,28 @@ class TestAnimeRenamer(unittest.TestCase):
         ]
         o = self.run_app(options, mock_fs.base_dir)
         # print(o)
-        for i in range(0, len(_mock_files)):
-            mock_fs.check_rename(_mock_files[i], renamed_files[i][0], renamed_files[i][1])
+        for i in range(0, len(_mock_files_tvdb)):
+            mock_fs.check_rename(_mock_files_tvdb[i], renamed_files[i][0], renamed_files[i][1])
 
+    def test_tmdb(self):
+        _files = [
+            ("one.piece.10.mkv", "One Piece.S01E10.[010].mkv"),
+            ("one.piece.97.mkv", "One Piece.S04E97.[097].mkv"),
+            ("one.piece.1022.mkv", "One Piece.S21E1022.[1022].mkv"),
+        ]
+        mock_fs = MockFiles("tmdb", [x[0] for x in _files])
+        options = [
+            "--language", "en",
+            "--id", "37854",
+            "--tmdb.absoluteGroupSeason", "Season 1 (Absolute Order)",
+            "-p", r".*\.(?P<absolute>\d+)\.(?P<ext>\w+?)$",
+            "--format", r"{series}.S{season.2}E{episode.2}.[{absolute.3}].{ext}",
+            str(mock_fs.base_dir)
+        ]
+        o = self.run_app(options, mock_fs.base_dir)
+        # print(o)
+        for f in _files:
+            mock_fs.check_rename(f[0], f[1])
         
     def setup(self):
         print ("setUp")
@@ -163,6 +182,7 @@ class TestAnimeRenamer(unittest.TestCase):
     def tearDown(self):
         try:
             shutil.rmtree(_test_dir)
+            pass
         except:
             pass
 
