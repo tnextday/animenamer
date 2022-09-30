@@ -64,7 +64,7 @@ func missingRun(cmd *cobra.Command, args []string) {
 		MediaExt:     namer.NewFileExtFromString(viper.GetString("mediaExt"), ","),
 		SubtitlesExt: namer.NewFileExtFromString(viper.GetString("subtitleExt"), ","),
 		SeriesName:   viper.GetString("name"),
-		SeriesId:     viper.GetString("seriesId"),
+		SeriesId:     viper.GetString("id"),
 	}
 	if es.SeriesId == "" {
 		var err error
@@ -79,7 +79,7 @@ func missingRun(cmd *cobra.Command, args []string) {
 		fmt.Printf("can't get series from tvdb, error: %v\n", err)
 		os.Exit(1)
 	}
-	for _, p := range viper.GetStringSlice("pattern") {
+	for _, p := range viper.GetStringSlice("missing.pattern") {
 		if err = es.AddPattern(p); err != nil {
 			fmt.Printf("parse pattern (%s) error: %v\n", p, err)
 		}
@@ -113,7 +113,7 @@ func missingRun(cmd *cobra.Command, args []string) {
 	for _, ep := range s.Episodes {
 		seId := series.SeasonEpisodeNumberIndex(ep.SeasonNumber, ep.EpisodeNumber)
 		if _, exists := episodeFileIndex[seId]; !exists {
-			s := fmt.Sprintf("missing s%.2de%.2d", ep.SeasonNumber, ep.EpisodeNumber)
+			s := fmt.Sprintf("missing S%.2dE%.2d", ep.SeasonNumber, ep.EpisodeNumber)
 			if ep.SeasonNumber != 0 {
 				s += fmt.Sprintf(", absolute %.3d", ep.AbsoluteNumber)
 			}
