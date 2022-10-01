@@ -9,6 +9,7 @@ import (
 
 	go_tmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/tnextday/animenamer/pkg/seriesdb/series"
+	"github.com/tnextday/animenamer/pkg/verbose"
 )
 
 var regGroupSeason = regexp.MustCompile(`^([^\(\)]+)?\s*(\((.*)\))?$`)
@@ -72,12 +73,52 @@ func (t *TMDB) GetSeries(seriesId, language string, options map[string]string) (
 	if err != nil {
 		return nil, err
 	}
-	var absoluteGroups []*EpisodeGroup
+	sd := &series.SeriesDetail{
+		SeriesID:     seriesId,
+		Name:         tvDetail.Name,
+		Overview:     tvDetail.Overview,
+		OriginalName: tvDetail.OriginalName,
+		SeasonNames:  make(map[int]string),
+		Context:      tvDetail,
+	}
+	for _, s := range tvDetail.Seasons {
+		sd.SeasonNames[s.SeasonNumber] = s.Name
+	}
+
+	delete(apiOptions, "append_to_response")
+	for _, s := range tvDetail.Seasons {
+		seasonDetails, err := t.Client.GetTVSeasonDetails(id, s.SeasonNumber, apiOptions)
+		if err != nil {
+			return nil, err
+		}
+		for _, ep := range seasonDetails.Episodes {
+			sep := &series.Episode{
+				SeasonNumber:  ep.SeasonNumber,
+				EpisodeNumber: ep.EpisodeNumber,
+				Name:          ep.Name,
+				Overview:      ep.Overview,
+				OriginalName:  ep.Name,
+				AiredDate:     ep.AirDate,
+				Context: &tmdbEpisodeContext{
+					TVDetails: tvDetail,
+				},
+			}
+			sd.Episodes = append(sd.Episodes, sep)
+		}
+	}
 
 	absoluteGroupSeason := t.AbsoluteGroupSeason
 	if v, exists := options["absoluteGroupSeason"]; exists {
 		absoluteGroupSeason = v
 	}
+	err = t.updateAbsoluteNumber(sd, tvDetail, absoluteGroupSeason, language)
+	if err != nil {
+		verbose.Printf("Series(%s) updateAbsoluteNumber %v", seriesId, err)
+	}
+	return sd, nil
+}
+
+func (t *TMDB) updateAbsoluteNumber(seriesDetail *series.SeriesDetail, tvDetail *go_tmdb.TVDetails, absoluteGroupSeason, language string) (err error) {
 	var (
 		groupName  string
 		seasonName string
@@ -88,9 +129,10 @@ func (t *TMDB) GetSeries(seriesId, language string, options map[string]string) (
 			seasonName = strings.TrimSpace(matches[1])
 			groupName = strings.TrimSpace(matches[3])
 		} else {
-			return nil, fmt.Errorf("absoluteGroupSeason matches unexpected: %v", matches)
+			return fmt.Errorf("absoluteGroupSeason matches unexpected: %v", matches)
 		}
 	}
+	var absoluteGroups []*EpisodeGroup
 	for _, v := range tvDetail.EpisodeGroups.Results {
 		if v.Type == 2 {
 			absoluteGroups = append(absoluteGroups, &EpisodeGroup{
@@ -111,26 +153,18 @@ func (t *TMDB) GetSeries(seriesId, language string, options map[string]string) (
 		}
 	}
 	if absoluteGroupId == "" {
-		return nil, fmt.Errorf("can't found absolute group")
+		return fmt.Errorf("can't found absolute group")
 	}
-	delete(apiOptions, "append_to_response")
+	apiOptions := map[string]string{
+		"language": language,
+	}
 	episodeGroupsDetails, err := t.Client.GetTVEpisodeGroupsDetails(absoluteGroupId, apiOptions)
 	if err != nil {
-		return nil, err
+
+		return err
 	}
 	if episodeGroupsDetails.GroupCount == 0 {
-		return nil, fmt.Errorf("no episode groups")
-	}
-	sd := &series.SeriesDetail{
-		SeriesID:     seriesId,
-		Name:         tvDetail.Name,
-		Overview:     tvDetail.Overview,
-		OriginalName: tvDetail.OriginalName,
-		SeasonNames:  make(map[int]string),
-		Context:      tvDetail,
-	}
-	for _, s := range tvDetail.Seasons {
-		sd.SeasonNames[s.SeasonNumber] = s.Name
+		return err
 	}
 
 	episodesGroupIdx := 0
@@ -146,21 +180,14 @@ func (t *TMDB) GetSeries(seriesId, language string, options map[string]string) (
 			break
 		}
 	}
+	absoluteMap := make(map[string]int)
 	for _, ep := range episodeGroupsDetails.Groups[episodesGroupIdx].Episodes {
-		sep := &series.Episode{
-			SeasonNumber:   ep.SeasonNumber,
-			EpisodeNumber:  ep.EpisodeNumber,
-			AbsoluteNumber: ep.Order + 1,
-			Name:           ep.Name,
-			Overview:       ep.Overview,
-			OriginalName:   ep.Name,
-			AiredDate:      ep.AirDate,
-			Context: &tmdbEpisodeContext{
-				TVDetails: tvDetail,
-			},
-		}
-		sd.Episodes = append(sd.Episodes, sep)
-
+		absoluteMap[series.SeasonEpisodeNumberIndex(ep.SeasonNumber, ep.EpisodeNumber)] = ep.Order + 1
 	}
-	return sd, nil
+	for _, ep := range seriesDetail.Episodes {
+		if absoluteNumber, exists := absoluteMap[series.SeasonEpisodeNumberIndex(ep.SeasonNumber, ep.EpisodeNumber)]; exists {
+			ep.AbsoluteNumber = absoluteNumber
+		}
+	}
+	return nil
 }
