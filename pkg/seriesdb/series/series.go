@@ -93,6 +93,6 @@ func AbsoluteNumberIndex(absoluteNumber int) string {
 	return "a" + strconv.Itoa(absoluteNumber)
 }
 
-func SeasonEpisodeNumberIndex(season, number int) string {
-	return "s" + strconv.Itoa(season) + "e" + strconv.Itoa(number)
+func SeasonEpisodeNumberIndex(season, episode int) string {
+	return "s" + strconv.Itoa(season) + "e" + strconv.Itoa(episode)
 }
