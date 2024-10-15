@@ -146,7 +146,7 @@ func (t *TMDB) updateAbsoluteNumber(seriesDetail *series.SeriesDetail, tvDetail 
 		absoluteGroupId = absoluteGroups[0].ID
 	} else {
 		for i, g := range absoluteGroups {
-			if strings.TrimSpace(g.Name) == groupName {
+			if g.ID == groupName || strings.TrimSpace(g.Name) == groupName {
 				absoluteGroupId = absoluteGroups[i].ID
 				break
 			}
@@ -170,7 +170,7 @@ func (t *TMDB) updateAbsoluteNumber(seriesDetail *series.SeriesDetail, tvDetail 
 	episodesGroupIdx := 0
 	for i, g := range episodeGroupsDetails.Groups {
 		if seasonName != "" {
-			if strings.TrimSpace(g.Name) == seasonName {
+			if g.ID == seasonName || strings.TrimSpace(g.Name) == seasonName {
 				episodesGroupIdx = i
 				break
 			}

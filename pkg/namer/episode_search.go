@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -86,16 +85,16 @@ func (es *EpisodeSearch) ListEpisodeFile(fp string, recursive bool) ([]*EpisodeF
 		}
 		dirs.Remove(e)
 		dirname := e.Value.(string)
-		if fileInfos, err := ioutil.ReadDir(dirname); err == nil {
+		if entries, err := os.ReadDir(dirname); err == nil {
 			var filesInSameDir []string
-			for _, fi := range fileInfos {
-				if strings.HasPrefix(fi.Name(), ".") {
+			for _, e := range entries {
+				if strings.HasPrefix(e.Name(), ".") {
 					continue
 				}
-				if fi.IsDir() && recursive {
-					dirs.PushBack(path.Join(dirname, fi.Name()))
+				if e.IsDir() && recursive {
+					dirs.PushBack(path.Join(dirname, e.Name()))
 				} else {
-					filesInSameDir = append(filesInSameDir, fi.Name())
+					filesInSameDir = append(filesInSameDir, e.Name())
 				}
 			}
 			if fileName != "" {

@@ -71,7 +71,7 @@ func init() {
 	rootCmd.PersistentFlags().String("tmdb.absoluteGroupSeason", "",
 		"when there are multiple tmdb absolute groups, use this name to match,\n"+
 			"this value can find at group episode -> season x page,\n"+
-			"the format is 'season name (group name)'")
+			"the format is 'season name (group name)' or 'season id (group id)'")
 	rootCmd.PersistentFlags().StringP("name", "n", "", "override the parsed series name with this (applies to all files)")
 	rootCmd.PersistentFlags().String("mediaExt", "mkv,mp4,avi,rm,rmvb,mov,m4v,wmv", "media file extensions")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show debugging info")
